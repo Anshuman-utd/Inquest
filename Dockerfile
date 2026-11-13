@@ -10,6 +10,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project
 COPY alembic.ini ./
 COPY backend ./backend
+COPY fixtures ./fixtures
 RUN useradd --system --no-create-home inquest
 USER inquest
 

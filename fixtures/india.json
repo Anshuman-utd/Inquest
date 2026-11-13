@@ -1,0 +1,30 @@
+{
+  "seed": 1729,
+  "start": "2025-01-01T00:00:00Z",
+  "days": 180,
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "customer_count": 450,
+  "merchant_count": 120,
+  "attempts_per_customer_week": 3.5,
+  "fraud_rate": 0.005,
+  "lookalikes_per_fraud_episode": 2,
+  "cities": [
+    {"id": "mumbai", "name": "Mumbai", "latitude": 19.076, "longitude": 72.8777},
+    {"id": "delhi", "name": "Delhi", "latitude": 28.6139, "longitude": 77.209},
+    {"id": "bengaluru", "name": "Bengaluru", "latitude": 12.9716, "longitude": 77.5946},
+    {"id": "pune", "name": "Pune", "latitude": 18.5204, "longitude": 73.8567},
+    {"id": "hyderabad", "name": "Hyderabad", "latitude": 17.385, "longitude": 78.4867},
+    {"id": "chennai", "name": "Chennai", "latitude": 13.0827, "longitude": 80.2707},
+    {"id": "kolkata", "name": "Kolkata", "latitude": 22.5726, "longitude": 88.3639}
+  ],
+  "amounts": [
+    {"category": "groceries", "median_minor": 95000, "log_sigma": 0.65, "weight": 26},
+    {"category": "dining", "median_minor": 60000, "log_sigma": 0.7, "weight": 19},
+    {"category": "transport", "median_minor": 27000, "log_sigma": 0.8, "weight": 18},
+    {"category": "retail", "median_minor": 260000, "log_sigma": 0.9, "weight": 17},
+    {"category": "utilities", "median_minor": 160000, "log_sigma": 0.6, "weight": 9},
+    {"category": "transfer", "median_minor": 150000, "log_sigma": 1.0, "weight": 9},
+    {"category": "cash_like", "median_minor": 250000, "log_sigma": 0.75, "weight": 2}
+  ]
+}
