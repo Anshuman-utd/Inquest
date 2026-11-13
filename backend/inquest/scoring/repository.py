@@ -11,16 +11,16 @@ TRANSACTION_COLUMNS = """
 
 
 def transaction_features(
-    connection: Connection, dataset_id: str, source_sequence: int
+    connection: Connection, dataset_id: str, source_sequence: int, *, currency: str
 ) -> tuple[float, ...] | None:
     focal_row = (
         connection.execute(
             text(f"""
             SELECT {TRANSACTION_COLUMNS}
             FROM fixture.transactions
-            WHERE dataset_id = :dataset AND source_sequence = :sequence
+            WHERE dataset_id = :dataset AND source_sequence = :sequence AND currency = :currency
         """),
-            {"dataset": dataset_id, "sequence": source_sequence},
+            {"dataset": dataset_id, "sequence": source_sequence, "currency": currency},
         )
         .mappings()
         .one_or_none()
@@ -34,6 +34,7 @@ def transaction_features(
         "merchant": focal.merchant_id,
         "device": focal.device_id,
         "sequence": focal.source_sequence,
+        "currency": currency,
         "time": focal.occurred_at,
         "start": focal.occurred_at - LOOKBACK,
     }
@@ -41,7 +42,7 @@ def transaction_features(
         text(f"""
             SELECT {TRANSACTION_COLUMNS}
             FROM fixture.transactions
-            WHERE dataset_id = :dataset AND occurred_at >= :start
+            WHERE dataset_id = :dataset AND currency = :currency AND occurred_at >= :start
                 AND (occurred_at, source_sequence) < (:time, :sequence)
                 AND (customer_id = :customer OR merchant_id = :merchant OR device_id = :device)
             ORDER BY occurred_at, source_sequence

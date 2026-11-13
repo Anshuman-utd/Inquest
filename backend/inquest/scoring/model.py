@@ -1,6 +1,7 @@
 from hashlib import sha256
 from math import exp, isfinite
 from pathlib import Path
+from threading import Lock
 from typing import Annotated, Literal
 
 import lightgbm as lgb
@@ -17,6 +18,7 @@ class ModelManifest(BaseModel):
 
     model_version: str
     feature_version: str
+    currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     training_dataset_id: str
     model_sha256: str
     threshold: Probability
@@ -58,6 +60,7 @@ class Scorer:
             raise ValueError("model artifact digest mismatch")
         if self.manifest.feature_version != FEATURE_VERSION:
             raise ValueError("model feature version does not match serving features")
+        self._prediction_lock = Lock()
         self.booster = lgb.Booster(model_str=model.decode())
         if tuple(self.booster.feature_name()) != FEATURE_NAMES:
             raise ValueError("model feature order does not match serving features")
@@ -65,11 +68,12 @@ class Scorer:
     def predict(self, features: tuple[float, ...]) -> Score:
         row = np.asarray([features], dtype=np.float64)
         manifest = self.manifest
-        raw = float(self.booster.predict(row, raw_score=True, num_threads=1)[0])
+        with self._prediction_lock:
+            raw = float(self.booster.predict(row, raw_score=True, num_threads=1)[0])
+            explanations = self.booster.predict(row, pred_contrib=True, num_threads=1)[0]
         probability = calibrated_probability(
             raw, manifest.calibration_slope, manifest.calibration_intercept
         )
-        explanations = self.booster.predict(row, pred_contrib=True, num_threads=1)[0]
         ranked = sorted(range(len(features)), key=lambda index: -abs(explanations[index]))[:5]
         return Score(
             model_version=manifest.model_version,

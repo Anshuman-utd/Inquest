@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
+from inquest.scoring.api import scoring_router
+from inquest.scoring.model import Scorer
 from inquest.settings import Settings
 
 
@@ -12,15 +14,18 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
+settings = Settings()
 engine = create_engine(
-    Settings().database_url,
+    settings.database_url,
     pool_pre_ping=True,
     pool_size=3,
     max_overflow=0,
     pool_timeout=3,
-    connect_args={"connect_timeout": 3},
+    connect_args={"connect_timeout": 3, "options": "-c timezone=UTC -c statement_timeout=5000"},
 )
-app = FastAPI(title="Inquest", version="0.1.0")
+scorer = Scorer(settings.scorer_directory)
+app = FastAPI(title="Inquest", version="0.2.0")
+app.include_router(scoring_router(engine, scorer))
 
 
 @app.get("/health", tags=["operations"])
@@ -32,7 +37,12 @@ def health() -> HealthResponse:
 def ready() -> HealthResponse:
     try:
         with engine.connect() as connection:
-            connection.execute(text("SELECT 1 FROM fixture.datasets LIMIT 1"))
+            ready_dataset = connection.execute(
+                text("SELECT 1 FROM fixture.datasets WHERE id = :dataset"),
+                {"dataset": scorer.manifest.training_dataset_id},
+            ).scalar_one_or_none()
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail="Database unavailable") from exc
+    if ready_dataset is None:
+        raise HTTPException(status_code=503, detail="Default scoring fixture unavailable")
     return HealthResponse()

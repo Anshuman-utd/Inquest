@@ -52,6 +52,7 @@ Run a 512 MB cgroup smoke test before committing to the serving footprint. Measu
 | Endpoint | Contract |
 | --- | --- |
 | `GET /health`, `GET /ready` | Liveness and bounded readiness check for the database and loaded model |
+| `GET /api/v1/scorer`, `GET /api/v1/datasets/{dataset_id}/transactions/{source_sequence}/score` | Read-only shared-fixture scorer metadata and point-in-time score preview |
 | `GET /api/v1/cases`, `GET /api/v1/cases/{case_id}` | Cursor pagination with stable tie-breaker, filters, case version and latest investigation |
 | `POST /api/v1/cases/{case_id}/investigations` | Idempotent start for an authorized analyst, returns a run ID |
 | `GET /api/v1/investigations/{id}/events` | Reconnectable SSE with ordered IDs and typed event payloads |

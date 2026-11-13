@@ -62,3 +62,9 @@ OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 PYTHONPATH=backend uv run python -m inq
 ```
 
 On macOS, install the LightGBM OpenMP runtime with `brew install libomp`. Output goes to `artifacts/scorer/`, including the LightGBM model, manifest, validation candidates, and machine-readable evaluation. Use `--validation-only` to stop before scoring the test windows. The small default model and its manifest are checked in under `models/scorer/` so Compose can start with the evaluated scorer. The manifest includes the training fixture and model digests.
+
+## Serving check
+
+The local Linux ARM64 API container answered 100 score requests with four concurrent clients in 0.26 seconds. Its cgroup reported a peak of 103,321,600 bytes (98.5 MiB) against the 512 MiB limit. This check covered database-backed scoring and explanations, with Postgres in its own container. The full simulator and investigation workload remains to be measured.
+
+A repeat of the training command on the same locked local toolchain produced byte-identical model and manifest files.

@@ -33,10 +33,20 @@ services:
         condition: service_completed_successfully
   api:
     build: .
+    mem_limit: 512m
     environment:
       INQUEST_DATABASE_URL: postgresql+psycopg://inquest_api:local_api@db:5432/inquest
     ports:
       - "127.0.0.1:${INQUEST_API_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"
+      interval: 5s
+      timeout: 4s
+      retries: 10
     depends_on:
       seed:
         condition: service_completed_successfully

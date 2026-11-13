@@ -1,6 +1,6 @@
 from collections import defaultdict, deque
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from math import asin, cos, log1p, radians, sin, sqrt
 from statistics import mean, stdev
 
@@ -94,7 +94,7 @@ def extract_features(
         if elapsed > 0:
             speed = last_distance / elapsed
 
-    hour_angle = focal.occurred_at.hour / 24 * radians(360)
+    hour_angle = focal.occurred_at.astimezone(UTC).hour / 24 * radians(360)
     last_day = focal.occurred_at - timedelta(days=1)
     last_hour = focal.occurred_at - timedelta(hours=1)
     values = [

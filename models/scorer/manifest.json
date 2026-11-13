@@ -1,6 +1,7 @@
 {
   "model_version": "lgbm-367c9bee181a850b",
   "feature_version": "v1",
+  "currency": "INR",
   "training_dataset_id": "v1-6ad7511a3aebaf4750c16dcd506c93bb04962a0c03867087ae58a41551d120e9",
   "model_sha256": "69b163549bead6ce751caea3371442280189e1f1c48cc099734f52f3b11dca28",
   "threshold": 0.042512972997826436,

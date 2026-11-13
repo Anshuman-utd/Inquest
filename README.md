@@ -4,17 +4,30 @@ Inquest is a portfolio project for investigating synthetic card and UPI-style pa
 
 **Synthetic data only. Don’t enter real personal data.**
 
-## Phase 1 status
+## Phase 2 status
 
-The API exposes liveness and database readiness. Postgres holds the shared fixture, evaluation truth, and workspace-scoped case records. Phase 2 adds model training and scoring. GitHub OAuth signup, quota enforcement, provider caching and investigation replay are planned for the phases that expose hosted access and live investigations.
+The API scores shared synthetic transactions with a small LightGBM model and returns signed TreeSHAP contributions. Postgres holds the shared fixture, evaluation truth, and workspace-scoped case records. GitHub OAuth signup, quota enforcement, provider caching and investigation replay are planned for the phases that expose hosted access and live investigations.
 
 ## Local development
 
 Run `docker compose up --build` and check `http://localhost:8000/health`. Compose starts Postgres and applies the database migration, and imports the shared synthetic fixture before starting the API. Check `/ready` for database readiness. The API schema is available at `http://localhost:8000/docs`.
 
-For a native Python 3.12 environment, run `uv sync --locked`, then run `uv run pytest`, `uv run ruff check`, and `uv run mypy`.
+For a native Python 3.12 environment, install `libomp` on macOS with `brew install libomp`. Then run `uv sync --locked`, then run `uv run pytest`, `uv run ruff check`, and `uv run mypy`.
 
 With the Compose database running, run `INQUEST_TEST_POSTGRES=1 uv run pytest` to exercise the tenant boundary against Postgres. The API role can read the shared fixture and can access workspace records only within a scoped transaction. The migration and test setup use a separate database role.
+
+## Score a transaction
+
+With Compose running, get the default dataset and score an example attempt.
+
+```sh
+curl -fsS http://localhost:8000/api/v1/scorer
+curl -fsS http://localhost:8000/api/v1/datasets/v1-6ad7511a3aebaf4750c16dcd506c93bb04962a0c03867087ae58a41551d120e9/transactions/150/score
+```
+
+The score preview reads the shared fixture as of the transaction’s timestamp and source sequence. The response contains the estimated fraud probability, fixed threshold, alert flag, and five signed contributions in raw-margin units. The preview performs no writes. Automated case creation will use the replay and workspace flow.
+
+The [scorer results](docs/SCORER_RESULTS.md) give the chronological validation and held-out metrics, the test misses, and the training command.
 
 ## Synthetic fixture
 

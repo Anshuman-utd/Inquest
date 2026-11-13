@@ -74,7 +74,9 @@ def test_batch_and_database_feature_parity() -> None:
             dataset_id = f"v{GENERATOR_VERSION}-{checksum}"
             for sequence, batch in enumerate(chronological_features(world), 1):
                 if sequence in samples:
-                    database = transaction_features(connection, dataset_id, sequence)
+                    database = transaction_features(
+                        connection, dataset_id, sequence, currency=world.config.currency
+                    )
                     assert database is not None
                     for actual, expected in zip(database, batch, strict=True):
                         assert (math.isnan(actual) and math.isnan(expected)) or actual == expected

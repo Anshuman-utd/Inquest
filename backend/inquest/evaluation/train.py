@@ -262,6 +262,7 @@ def train(config: GeneratorConfig, output: Path, *, validation_only: bool) -> bo
     manifest = ModelManifest(
         model_version=f"lgbm-{identity[:16]}",
         feature_version=FEATURE_VERSION,
+        currency=config.currency,
         training_dataset_id=f"v{GENERATOR_VERSION}-{checksum}",
         model_sha256=model_hash,
         threshold=threshold,
