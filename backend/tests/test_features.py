@@ -3,7 +3,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 
 from inquest.scoring.features import chronological_features, extract_features, named_features
 from inquest.scoring.repository import transaction_features
@@ -59,9 +59,10 @@ def test_cutoff_includes_only_earlier_keys() -> None:
 
 @pytest.mark.skipif(os.getenv("INQUEST_TEST_POSTGRES") != "1", reason="requires seeded Postgres")
 def test_batch_and_database_feature_parity() -> None:
+    from hashlib import sha256
     from pathlib import Path
 
-    from inquest.synthetic.generator import generate
+    from inquest.synthetic.generator import GENERATOR_VERSION, generate
     from inquest.synthetic.models import GeneratorConfig
 
     world = generate(GeneratorConfig.model_validate_json(Path("fixtures/india.json").read_text()))
@@ -69,9 +70,8 @@ def test_batch_and_database_feature_parity() -> None:
     engine = create_engine(Settings().database_url)
     try:
         with engine.connect() as connection:
-            dataset_id = connection.execute(
-                text("SELECT id FROM fixture.datasets WHERE manifest ? 'timezone' LIMIT 1")
-            ).scalar_one()
+            checksum = sha256(world.model_dump_json().encode()).hexdigest()
+            dataset_id = f"v{GENERATOR_VERSION}-{checksum}"
             for sequence, batch in enumerate(chronological_features(world), 1):
                 if sequence in samples:
                     database = transaction_features(connection, dataset_id, sequence)

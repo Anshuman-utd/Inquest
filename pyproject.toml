@@ -6,6 +6,8 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.16,<2",
     "fastapi>=0.162.7,<0.163",
+    "lightgbm>=4.7,<4.8",
+    "numpy>=2,<3",
     "psycopg[binary]>=3.2,<4",
     "pydantic-settings>=2,<3",
     "sqlalchemy>=2.0,<2.1",
@@ -14,10 +16,14 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    { include-group = "train" },
     "httpx2>=2,<3",
     "mypy>=1.15,<3",
     "pytest>=8,<10",
     "ruff>=0.11,<1",
+]
+train = [
+    "scikit-learn>=1.7,<2",
 ]
 
 [tool.pytest.ini_options]
@@ -36,3 +42,7 @@ select = ["E", "F", "I", "UP", "B"]
 mypy_path = "backend"
 strict = true
 files = ["backend"]
+
+[[tool.mypy.overrides]]
+module = ["lightgbm", "sklearn.*"]
+ignore_missing_imports = true
