@@ -1,0 +1,16 @@
+# Engineering decisions
+
+Phase 0 proposals for review. Record later revisions here with their rationale and links to measured results when available.
+
+| ID | Decision | Alternatives considered | Rationale |
+| --- | --- | --- | --- |
+| 001 | FastAPI with Pydantic v2 and Postgres | Separate Node API, SQLite for the hosted app | Keep the scoring and agent integration typed in Python. Use one durable relational store across Compose and the hosted environment. |
+| 002 | LangGraph with a Postgres-backed interrupt | Hand-written loop, managed orchestration | The hand-written loop would need equivalent durable resume behavior and recovery tests. LangGraph supplies the primitives while Inquest controls evidence, tool execution, and authorization. |
+| 003 | LightGBM native contributions, optional offline SHAP analysis | CPU-only XGBoost, SHAP installed in production | Both boosted libraries are viable. Start with a small single-threaded LightGBM model and verify its native contributions against its raw score. Keep the serving dependencies separate from training and diagnostics. |
+| 004 | BM25 over versioned policy documents | pgvector, hosted embeddings, hybrid search | A dozen short policies mostly use precise domain terms. Local BM25 is deterministic and needs no network, extension or embedding model. Check recall against a labeled policy query set. |
+| 005 | Vite static SPA with TanStack Query | Next.js, server-rendered frontend | Core screens are interactive and API-backed. Static hosting fits the navigation and leaves one backend for authentication, score serving and events. |
+| 006 | Durable run state in Postgres and bounded in-process supervision | Redis/Upstash, separate worker on day one | Expected demo concurrency is low. Durable claim/recovery and explicit bounds cover the first workload with fewer services. Revisit if measured contention or latency warrants it. |
+| 007 | Groq default, opt-in Gemini, local response cache | Local LLM, automatic cross-provider failover | Hosted models fit the memory constraint. Explicit provider selection preserves clear attribution in evaluations. Process-local disk is useful for caching, while stable run and audit state stays in Postgres. |
+| 008 | Synthetic entity-level world with chronological evaluation | Public dataset as the primary source, random split | The investigation needs interpretable linked events and scenario truth. A chronological split matches deployment and controls feature leakage. |
+| 009 | Strict evidence references and an authenticated analyst decision | Unchecked prose, agent-triggered dispositions | A typed verifier can reject unsupported claims, and the recorded human decision is the only route to a demo disposition. |
+| 010 | Persist stream events with sequence IDs | Stream model tokens directly, poll for the final report only | The analyst can see useful steps as they occur and reconnect during a restart. Public events carry typed factual summaries and evidence IDs. |
