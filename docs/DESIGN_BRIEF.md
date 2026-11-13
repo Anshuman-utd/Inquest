@@ -33,7 +33,9 @@ Reserve teal for interaction. Use colorblind-friendly semantic foregrounds with 
 | Fraud | `#A33D16` | `#FFAB82` | ShieldAlert |
 | Legit | `#215F9A` | `#9CCBFF` | CircleCheck |
 | Review | `#785700` | `#F1CA64` | CircleHelp |
-| Escalated | `#673EA0` | `#D6B5FF` | ArrowUpRight | Show the risk score as a number with an optional neutral bar. Validate WCAG AA contrast for interactive text, focus and status indicators in both themes. Default to system theme and remember the user's choice.
+| Escalated | `#673EA0` | `#D6B5FF` | ArrowUpRight |
+
+Show the risk score as a number with an optional neutral bar. The proposed status and accent foregrounds have a minimum 5.93:1 contrast against the listed neutral backgrounds. Validate WCAG AA contrast for interactive text, focus and status indicators in both themes. Default to system theme and remember the user's choice.
 
 ## Screens
 
