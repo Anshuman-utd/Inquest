@@ -1,10 +1,10 @@
 {
-  "model_version": "lgbm-367c9bee181a850b",
-  "feature_version": "v1",
+  "model_version": "lgbm-5e143a31879bae22",
+  "feature_version": "v2",
   "currency": "INR",
   "training_dataset_id": "v1-6ad7511a3aebaf4750c16dcd506c93bb04962a0c03867087ae58a41551d120e9",
-  "model_sha256": "69b163549bead6ce751caea3371442280189e1f1c48cc099734f52f3b11dca28",
-  "threshold": 0.042512972997826436,
-  "calibration_slope": 1.838609186201547,
-  "calibration_intercept": -5.015965788324489
+  "model_sha256": "9600c847125f85799002aab98b4a977e0f73228ebe136ae67d54b9a5c4ceb04b",
+  "threshold": 0.008786782651795052,
+  "calibration_slope": 0.8744159101900626,
+  "calibration_intercept": -2.705875214515726
 }

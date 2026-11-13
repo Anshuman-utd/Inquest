@@ -84,3 +84,24 @@ def test_batch_and_database_feature_parity() -> None:
                     break
     finally:
         engine.dispose()
+
+
+def test_recipient_burst_features_exclude_focal_and_future_senders() -> None:
+    focal = payment(4, NOW).model_copy(update={"channel": "upi", "flow": "push"})
+    old = payment(1, NOW - timedelta(days=1)).model_copy(update={"customer_id": "repeat"})
+    recent = [
+        payment(2, NOW - timedelta(minutes=3)).model_copy(
+            update={"customer_id": "repeat", "flow": "push"}
+        ),
+        payment(3, NOW - timedelta(minutes=2)).model_copy(
+            update={"customer_id": "new", "flow": "push"}
+        ),
+    ]
+    future = payment(5, NOW).model_copy(update={"customer_id": "future", "flow": "push"})
+    values = named_features(
+        extract_features(focal, CUSTOMER, MERCHANT, {CITY.id: CITY}, [old, *recent, focal, future])
+    )
+    assert values["merchant_distinct_customers_5m"] == 2
+    assert values["merchant_new_senders_5m"] == 1
+    assert values["merchant_upi_push_count_5m"] == 2
+    assert values["seconds_since_merchant"] == 120

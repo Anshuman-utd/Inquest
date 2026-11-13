@@ -1,12 +1,12 @@
 from collections import defaultdict, deque
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from math import asin, cos, log1p, radians, sin, sqrt
-from statistics import mean, stdev
+from statistics import fmean
 
 from inquest.synthetic.models import City, Customer, Merchant, Transaction, World
 
-FEATURE_VERSION = "v1"
+FEATURE_VERSION = "v2"
 LOOKBACK = timedelta(days=30)
 WINDOWS = (("5m", timedelta(minutes=5)), ("1h", timedelta(hours=1)), ("24h", timedelta(days=1)))
 FEATURE_NAMES = (
@@ -36,6 +36,16 @@ FEATURE_NAMES = (
     "device_distinct_customers_1h",
     "device_distinct_instruments_1h",
     "merchant_distinct_customers_1h",
+    "seconds_since_merchant",
+    "seconds_since_customer",
+    "seconds_since_device",
+    "merchant_distinct_customers_5m",
+    "merchant_new_senders_5m",
+    "merchant_upi_push_count_5m",
+    "merchant_amount_similarity_5m",
+    "customer_merchant_count_30d",
+    "customer_collect_count_30d",
+    "short_travel_distance_km",
     *(
         f"{metric}_{window}"
         for window, _ in WINDOWS
@@ -79,7 +89,12 @@ def extract_features(
     device_history = [item for item in prior if item.device_id == focal.device_id]
     log_amount = log1p(focal.amount_minor)
     amounts = [log1p(item.amount_minor) for item in customer_history]
-    deviation = stdev(amounts) if len(amounts) >= 3 else 0.0
+    amount_mean = fmean(amounts) if amounts else 0.0
+    deviation = (
+        sqrt(sum((amount - amount_mean) ** 2 for amount in amounts) / (len(amounts) - 1))
+        if len(amounts) >= 3
+        else 0.0
+    )
 
     location = cities.get(focal.city_id) if focal.city_id else None
     last_physical = max(
@@ -97,6 +112,20 @@ def extract_features(
     hour_angle = focal.occurred_at.astimezone(UTC).hour / 24 * radians(360)
     last_day = focal.occurred_at - timedelta(days=1)
     last_hour = focal.occurred_at - timedelta(hours=1)
+    last_five_minutes = focal.occurred_at - timedelta(minutes=5)
+    merchant_recent = [item for item in merchant_history if item.occurred_at >= last_five_minutes]
+    earlier_senders = {
+        item.customer_id for item in merchant_history if item.occurred_at < last_five_minutes
+    }
+    recent_senders = {item.customer_id for item in merchant_recent}
+    customer_at_merchant = [
+        item for item in customer_history if item.merchant_id == focal.merchant_id
+    ]
+
+    def seconds_since(items: list[Transaction]) -> float:
+        latest = max((item.occurred_at for item in items), default=None)
+        return (focal.occurred_at - latest).total_seconds() if latest else float("nan")
+
     values = [
         log_amount,
         float(focal.channel == "upi"),
@@ -114,12 +143,12 @@ def extract_features(
         elapsed,
         speed,
         float(len(amounts)),
-        (log_amount - mean(amounts)) / deviation if deviation > 0 else float("nan"),
+        (log_amount - amount_mean) / deviation if deviation > 0 else float("nan"),
         float(deviation == 0),
         float(not any(item.device_id == focal.device_id for item in customer_history)),
         float(not any(item.merchant_id == focal.merchant_id for item in customer_history)),
         float(not any(item.instrument_id == focal.instrument_id for item in device_history)),
-        log_amount - mean(log1p(item.amount_minor) for item in merchant_history)
+        log_amount - fmean(log1p(item.amount_minor) for item in merchant_history)
         if merchant_history
         else float("nan"),
         float(
@@ -135,6 +164,19 @@ def extract_features(
         float(
             len({item.customer_id for item in merchant_history if item.occurred_at >= last_hour})
         ),
+        seconds_since(merchant_history),
+        seconds_since(customer_history),
+        seconds_since(device_history),
+        float(len(recent_senders)),
+        float(len(recent_senders - earlier_senders)),
+        float(sum(item.flow == "push" for item in merchant_recent)),
+        min(
+            (abs(log_amount - log1p(item.amount_minor)) for item in merchant_recent),
+            default=float("nan"),
+        ),
+        float(len(customer_at_merchant)),
+        float(sum(item.flow == "collect" for item in customer_history)),
+        last_distance if elapsed <= 2 else float("nan"),
     ]
     for _, duration in WINDOWS:
         start = focal.occurred_at - duration
@@ -153,7 +195,9 @@ def extract_features(
     return tuple(values)
 
 
-def chronological_features(world: World) -> Iterator[tuple[float, ...]]:
+def chronological_features(
+    world: World, selected: Collection[int] | None = None
+) -> Iterator[tuple[float, ...]]:
     customers = {customer.id: customer for customer in world.customers}
     merchants = {merchant.id: merchant for merchant in world.merchants}
     cities = {city.id: city for city in world.config.cities}
@@ -170,18 +214,18 @@ def chronological_features(world: World) -> Iterator[tuple[float, ...]]:
             histories["device", transaction.device_id],
         )
         lower_bound = transaction.occurred_at - LOOKBACK
-        history: dict[int, Transaction] = {}
         for bucket in buckets:
             while bucket and bucket[0].occurred_at < lower_bound:
                 bucket.popleft()
-            history.update((item.source_sequence, item) for item in bucket)
-        yield extract_features(
-            transaction,
-            customers[transaction.customer_id],
-            merchants[transaction.merchant_id],
-            cities,
-            sorted(history.values(), key=event_key),
-        )
+        if selected is None or transaction.source_sequence in selected:
+            history = {item.source_sequence: item for bucket in buckets for item in bucket}
+            yield extract_features(
+                transaction,
+                customers[transaction.customer_id],
+                merchants[transaction.merchant_id],
+                cities,
+                sorted(history.values(), key=event_key),
+            )
         for bucket in buckets:
             bucket.append(transaction)
 
