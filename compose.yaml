@@ -36,6 +36,7 @@ services:
     mem_limit: 512m
     environment:
       INQUEST_DATABASE_URL: postgresql+psycopg://inquest_api:local_api@db:5432/inquest
+      INQUEST_TOOL_DATABASE_URL: postgresql+psycopg://inquest_tool:local_tool@db:5432/inquest
     ports:
       - "127.0.0.1:${INQUEST_API_PORT:-8000}:8000"
     healthcheck:

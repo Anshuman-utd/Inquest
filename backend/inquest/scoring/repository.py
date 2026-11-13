@@ -1,13 +1,8 @@
 from sqlalchemy import Connection, text
 
+from inquest.db.fixture import TRANSACTION_COLUMNS
 from inquest.scoring.features import LOOKBACK, extract_features
 from inquest.synthetic.models import City, Customer, Merchant, Transaction
-
-TRANSACTION_COLUMNS = """
-    source_sequence, customer_id, merchant_id, device_id, instrument_id, city_id,
-    location_source, occurred_at, amount_minor, currency, channel, flow,
-    declined, recent_reregistration
-"""
 
 
 def transaction_features(
