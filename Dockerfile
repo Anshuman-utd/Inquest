@@ -8,6 +8,7 @@ ENV UV_NO_DEV=1 UV_PYTHON_DOWNLOADS=never \
     PATH="/app/.venv/bin:$PATH" PYTHONPATH="/app/backend"
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project
+COPY alembic.ini ./
 COPY backend ./backend
 RUN useradd --system --no-create-home inquest
 USER inquest

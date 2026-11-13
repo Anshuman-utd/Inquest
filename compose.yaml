@@ -1,5 +1,36 @@
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: inquest
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local_admin
+    ports:
+      - "127.0.0.1:${INQUEST_DB_PORT:-5434}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/01-roles.sql:/docker-entrypoint-initdb.d/01-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d inquest"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      INQUEST_MIGRATION_DATABASE_URL: postgresql+psycopg://inquest_migrator:local_migrator@db:5432/inquest
+    depends_on:
+      db:
+        condition: service_healthy
   api:
     build: .
+    environment:
+      INQUEST_DATABASE_URL: postgresql+psycopg://inquest_api:local_api@db:5432/inquest
     ports:
       - "127.0.0.1:${INQUEST_API_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  postgres_data:
