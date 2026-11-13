@@ -34,7 +34,7 @@ def test_scorer_contract_and_missing_transaction() -> None:
         pytest.skip("requires seeded Postgres")
     with TestClient(app) as client:
         metadata = client.get("/api/v1/scorer").json()
-        dataset = metadata["training_dataset_id"]
+        dataset = metadata["demo_dataset_id"]
         url = f"/api/v1/datasets/{dataset}/transactions"
         response = client.get(f"{url}/150/score")
         missing = client.get(f"{url}/9223372036854775807/score")

@@ -39,7 +39,7 @@ def ready() -> HealthResponse:
         with engine.connect() as connection:
             ready_dataset = connection.execute(
                 text("SELECT 1 FROM fixture.datasets WHERE id = :dataset"),
-                {"dataset": scorer.manifest.training_dataset_id},
+                {"dataset": scorer.manifest.serving_dataset_id},
             ).scalar_one_or_none()
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail="Database unavailable") from exc

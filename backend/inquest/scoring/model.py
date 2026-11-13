@@ -20,10 +20,16 @@ class ModelManifest(BaseModel):
     feature_version: str
     currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     training_dataset_id: str
+    demo_dataset_id: str | None = None
+
     model_sha256: str
     threshold: Probability
     calibration_slope: Annotated[float, Field(gt=0, allow_inf_nan=False)]
     calibration_intercept: Annotated[float, Field(allow_inf_nan=False)]
+
+    @property
+    def serving_dataset_id(self) -> str:
+        return self.demo_dataset_id or self.training_dataset_id
 
 
 class Contribution(BaseModel):

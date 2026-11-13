@@ -27,7 +27,7 @@ curl -fsS http://localhost:8000/api/v1/datasets/v1-6ad7511a3aebaf4750c16dcd506c9
 
 The score preview reads the shared fixture as of the transaction’s timestamp and source sequence. The response contains the estimated fraud probability, fixed threshold, alert flag, and five signed contributions in raw-margin units. The preview performs no writes. Automated case creation will use the replay and workspace flow.
 
-The [scorer results](docs/SCORER_RESULTS.md) give the chronological validation and held-out metrics, the test misses, and the training command.
+The [scorer results and threshold sweep](docs/SCORER_THRESHOLD_SWEEP.md) give the chronological validation and held-out metrics, the test misses, and the training command.
 
 ## Synthetic fixture
 

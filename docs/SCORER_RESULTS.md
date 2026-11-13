@@ -1,4 +1,6 @@
-# Phase 2 scorer results
+# Phase 2 initial scorer results
+
+The [threshold follow-up](SCORER_THRESHOLD_SWEEP.md) covers the current scorer. Reproduce this initial run from revision `fcd38b7`.
 
 Model `lgbm-367c9bee181a850b` uses 44 point-in-time features and the default INR fixture. The locked probability threshold is **0.042512972997826436**. The scorer met the recall and alert targets on validation. Recall fell to **44.2%** on the untouched test and **58.6%** on the shifted fixture. The threshold was held fixed.
 

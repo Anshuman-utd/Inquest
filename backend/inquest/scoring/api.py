@@ -19,6 +19,7 @@ class ScorerInfo(BaseModel):
     threshold: float
     currency: str
     training_dataset_id: str
+    demo_dataset_id: str
 
 
 def scoring_router(engine: Engine, scorer: Scorer) -> APIRouter:
@@ -33,6 +34,7 @@ def scoring_router(engine: Engine, scorer: Scorer) -> APIRouter:
             threshold=manifest.threshold,
             currency=manifest.currency,
             training_dataset_id=manifest.training_dataset_id,
+            demo_dataset_id=manifest.serving_dataset_id,
         )
 
     @router.get("/datasets/{dataset_id}/transactions/{source_sequence}/score")

@@ -142,11 +142,23 @@ def refit(output: Path, *, validation_only: bool) -> None:
     ).hexdigest()
     demo = generate(base)
     demo_hash = sha256(demo.model_dump_json().encode()).hexdigest()
+    fit_identity = sha256(
+        json.dumps(
+            {
+                "generator_version": GENERATOR_VERSION,
+                "config": fit_config.model_dump(mode="json"),
+                "seeds": FIT_SEEDS,
+                "warmup_days": WARMUP_DAYS,
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
     manifest = ModelManifest(
         model_version=f"lgbm-{identity[:16]}",
         feature_version=FEATURE_VERSION,
         currency=base.currency,
-        training_dataset_id=f"v{GENERATOR_VERSION}-{demo_hash}",
+        training_dataset_id=f"cohort-{fit_identity}",
+        demo_dataset_id=f"v{GENERATOR_VERSION}-{demo_hash}",
         model_sha256=model_hash,
         threshold=chosen.best.threshold,
         calibration_slope=chosen.calibration[0],
