@@ -1,6 +1,6 @@
 # Inquest implementation plan
 
-Phase 0 proposal · 14 November 2026
+Phase 0 approved scope · 14 November 2026
 
 Inquest replays synthetic card and UPI-style payment attempts. A small classifier scores each attempt and opens an analyst case at a fixed threshold. An analyst starts the investigation from the case. A bounded agent gathers cited evidence, recommends an action, and pauses for a decision. The API records the analyst's decision and resumes graph finalization. All actions are dispositions inside the demo. Inquest has no payment integration.
 
@@ -32,7 +32,7 @@ Package versions below are source snapshots and candidates for a compatibility l
 | API | Python 3.12, FastAPI, Pydantic v2, typed service boundaries, SQLAlchemy and Alembic for application persistence and migrations | [FastAPI 0.162.7 on PyPI](https://pypi.org/project/fastapi/0.162.7/). First-party SSE has been available since 0.135.0. [FastAPI SSE docs](https://fastapi.tiangolo.com/tutorial/server-sent-events/) |
 | Orchestration | LangGraph `StateGraph` and `AsyncPostgresSaver`. Use `interrupt()` and resume by thread ID with `Command(resume=...)`. | [LangGraph 1.2.21](https://pypi.org/project/langgraph/1.2.21/), [Postgres checkpointer 3.2.0](https://pypi.org/project/langgraph-checkpoint-postgres/3.2.0/), [interrupt API](https://docs.langchain.com/oss/python/langgraph/interrupts), [async saver setup](https://docs.langchain.com/oss/python/langgraph/add-memory) |
 | Model | LightGBM with shallow trees, CPU inference, and native per-feature TreeSHAP contributions. Compare a simple linear baseline offline. | [LightGBM 4.7.0](https://pypi.org/project/lightgbm/4.7.0/), [Booster API](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.Booster.html), [XGBoost 3.4.1](https://pypi.org/project/xgboost/3.4.1/), [XGBoost CPU packages](https://xgboost.readthedocs.io/en/stable/install.html), [SHAP 0.54.1](https://pypi.org/project/shap/0.54.1/) |
-| Hosted LLM | Groq GPT-OSS 20B primary and Gemini 3.1 Flash-Lite as an explicitly selected alternative. Use each provider's official Python SDK behind a small adapter. | [Groq SDK 1.7.0](https://pypi.org/project/groq/1.7.0/), [Google Gen AI SDK 3.3.0](https://pypi.org/project/google-genai/3.3.0/), [Groq model](https://console.groq.com/docs/model/openai/gpt-oss-20b), [Gemini model](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite) |
+| Hosted LLM | Groq GPT-OSS 20B primary and Gemini 3.1 Flash-Lite as an opt-in alternative disabled by default until quota is confirmed. Use each provider's official Python SDK behind a small adapter. | [Groq SDK 1.7.0](https://pypi.org/project/groq/1.7.0/), [Google Gen AI SDK 3.3.0](https://pypi.org/project/google-genai/3.3.0/), [Groq model](https://console.groq.com/docs/model/openai/gpt-oss-20b), [Gemini model](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite) |
 | Web | Vite, React, TypeScript, Tailwind, TanStack Query, and Lucide. Static SPA with route rewrites and a browser-to-API event stream. | [Vite static deployment](https://vite.dev/guide/static-deploy), [Vercel SPA rewrites](https://vercel.com/docs/frameworks/frontend/vite) |
 | Hosting | Vercel Hobby for the personal portfolio UI, one Render Free service, one Neon Free project. Compose uses local Postgres and the same app images. | [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Render Free](https://render.com/docs/free), [Neon plans](https://neon.com/docs/introduction/plans) |
 
@@ -60,7 +60,11 @@ Run a 512 MB cgroup smoke test before committing to the serving footprint. Measu
 | `GET /api/v1/simulator`, `POST /api/v1/simulator/commands` | Simulator status and authorized start, pause and replay commands |
 | `GET /api/v1/evaluations` | Recorded runs, denominators, configuration and comparison metrics |
 
-Version the contract under `/api/v1`. Export and validate the OpenAPI schema as routes land, and pin the stream event schemas alongside it before frontend work. Proposed hosted access is a public read-only sample and an authenticated analyst workspace for edits and metered live calls. If public signup is required, design per-user workspace ownership and quota isolation in Phase 1. Use a short-lived authenticated fetch stream for restricted events and keep bearer tokens out of URLs. Both API calls and the event stream use the configured frontend origin.
+Version the contract under `/api/v1`. Export and validate the OpenAPI schema as routes land, and pin the stream event schemas alongside it before frontend work. The hosted demo allows public signup and provisions an isolated workspace for each analyst. Use the shared read-only synthetic INR fixture and Indian cities. Keep currency, city data, and amount distributions configurable. Cases, investigations, decisions and notes are workspace-owned. Investigation artifacts inherit the same ownership. A single tenant-scoped data layer binds the authenticated workspace on every request and background job, with Postgres row-level policies and composite foreign keys. Phase 1 tests exercise cross-workspace reads, writes and references.
+
+Use GitHub OAuth with state and S256 PKCE. GitHub is familiar to the portfolio audience and avoids operating email verification or storing passwords. Resolve the account using its stable GitHub ID and discard the OAuth access token after identity lookup. Keep application credentials out of URLs and authenticate fetch streams against the configured frontend origin. OAuth endpoints land with the hosted access work. [GitHub OAuth web flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+
+Rate-limit signup and investigation starts per IP using only trusted ingress IP metadata. Enforce a per-workspace daily live-investigation cap and a global daily LLM token budget with an operator kill switch. Atomically reserve budget before outbound calls, including retries, and enforce idempotency before consuming a workspace slot. Serve versioned pre-recorded investigations in replay mode when quota is exhausted. Keep the provider response cache on disk. Clearly label replay, and show “Synthetic data only. Don’t enter real personal data.” at signup and beside notes. Keep notes out of provider prompts.
 
 ## Proposed repository structure
 
@@ -97,13 +101,13 @@ Push each tested slice directly to `origin/main` in order. Stop at the end of ea
 | The agent appears strong because the ML gate filters difficult misses | Publish both alert-only and end-to-end denominators and use policy and tool ablations. Check in phase 5. |
 | Provider rate or model availability changes | Meter and cap usage, fail into an explicit inconclusive result, and provide a clearly labeled recorded demo. Check in phases 4 and 7. |
 | Restart or duplicate approvals lose progress | Durable checkpoints and ordered events, idempotency, row-level concurrency control and restart tests. Check in phase 4. |
-| Public users consume quota or interfere with shared cases | Make the sample read-only. Authorize writes server-side and enforce workspace scope and live-run limits. Decide the signup model before schema work. |
+| Public users consume quota or interfere with shared cases | Share an immutable fixture and enforce tenant-scoped authorization and row-level policies. Cap live work per workspace and signup and investigation traffic per IP. Use a global daily LLM budget, kill switch, cache and labeled replay. Test multi-workspace and concurrent quota behavior. |
 | Combined free-tier cold start, storage and memory limits | Budget and measure each resource under the actual hosted workload before publishing. Keep bulk evaluation local. |
 
-## Questions for Phase 1
+## Phase 0 decisions for Phase 1
 
-1. Should the hosted portfolio have public signup with an isolated workspace per analyst, or a public read-only sample plus an invite-only analyst workspace?
-2. Should the demo use India-first INR and Indian cities, or a geography-neutral fixture? Both options include card and UPI-style attempts.
-3. Do you have a Groq project for the live demo, and should Gemini stay optional until its project quota is confirmed? Please share availability only. Credentials belong in the local environment.
-4. Do you approve the slate-and-teal analyst console in [the design brief](DESIGN_BRIEF.md), including dark and light themes?
-5. Is the proposed validation target of at least 90% recall within 30 alerts per 1,000 transactions a good starting point for the portfolio demo?
+- Public GitHub OAuth signup provisions an isolated analyst workspace over one shared synthetic fixture.
+- The fixture uses INR and Indian cities by default, with configurable amounts and UPI collect-request scams, SIM-swap takeover, and mule-account scenarios.
+- Groq is primary. Gemini stays disabled by default until its quota is confirmed.
+- The approved slate-and-teal console uses separate colorblind-safe semantic status treatments with contrast checks in both themes.
+- Select the scorer threshold on validation for at least 90% recall within 30 alerts per 1,000 attempts and report on a later untouched window. Include difficult legitimate lookalikes and per-scenario recall. Evaluate the agent on legitimate alerts cleared and fraud retained.

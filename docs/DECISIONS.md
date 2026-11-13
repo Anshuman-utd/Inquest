@@ -1,6 +1,6 @@
 # Engineering decisions
 
-Phase 0 proposals for review. Record later revisions here with their rationale and links to measured results when available.
+Phase 0 decisions and implementation rationale. Record later revisions here with their rationale and links to measured results when available.
 
 | ID | Decision | Alternatives considered | Rationale |
 | --- | --- | --- | --- |
@@ -13,4 +13,5 @@ Phase 0 proposals for review. Record later revisions here with their rationale a
 | 007 | Groq default, opt-in Gemini, local response cache | Local LLM, automatic cross-provider failover | Hosted models fit the memory constraint. Explicit provider selection preserves clear attribution in evaluations. Process-local disk is useful for caching, while stable run and audit state stays in Postgres. |
 | 008 | Synthetic entity-level world with chronological evaluation | Public dataset as the primary source, random split | The investigation needs interpretable linked events and scenario truth. A chronological split matches deployment and controls feature leakage. |
 | 009 | Strict evidence references and an authenticated analyst decision | Unchecked prose, agent-triggered dispositions | A typed verifier can reject unsupported claims, and the recorded human decision is the only route to a demo disposition. |
+| 011 | Public signup with GitHub OAuth and tenant-scoped Postgres | Verified email, invite-only workspace | GitHub fits the portfolio audience and removes password and email delivery work. Shared fixtures avoid duplicating synthetic history. Workspace isolation and layered usage limits protect the demo. |
 | 010 | Persist stream events with sequence IDs | Stream model tokens directly, poll for the final report only | The analyst can see useful steps as they occur and reconnect during a restart. Public events carry typed factual summaries and evidence IDs. |
