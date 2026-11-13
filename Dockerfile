@@ -16,6 +16,7 @@ COPY alembic.ini ./
 COPY backend ./backend
 COPY fixtures ./fixtures
 COPY models ./models
+COPY policies ./policies
 RUN useradd --system --no-create-home inquest
 USER inquest
 

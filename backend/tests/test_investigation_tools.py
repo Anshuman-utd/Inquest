@@ -2,6 +2,7 @@ import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
@@ -22,8 +23,9 @@ from inquest.investigation.contracts import (
     TransactionObservation,
     VelocityObservation,
 )
+from inquest.investigation.policy import PolicyEvidence, PolicyIndex
 from inquest.investigation.repository import InvestigationUnavailable
-from inquest.investigation.tools import DATABASE_REQUESTS, InvestigationTools
+from inquest.investigation.tools import TOOL_REQUESTS, InvestigationTools
 from inquest.settings import Settings
 
 AT = datetime(2025, 3, 1, 12, tzinfo=UTC)
@@ -39,6 +41,7 @@ class CaseFixture:
     other_workspace: UUID
     other_analyst: UUID
     remote_investigation: UUID
+    replay_id: UUID
     tools: InvestigationTools
     tool_engine: Engine
 
@@ -143,7 +146,8 @@ def case() -> Iterator[CaseFixture]:
             other,
             other_analyst,
             remote_investigation,
-            InvestigationTools(TenantDatabase(api), reader),
+            replay,
+            InvestigationTools(TenantDatabase(api), reader, PolicyIndex(Path("policies"))),
             reader,
         )
     finally:
@@ -191,7 +195,7 @@ def test_tool_contract_rejects_scope_overrides_and_invalid_inputs(
     arguments: dict[str, object],
 ) -> None:
     with pytest.raises(ValidationError):
-        DATABASE_REQUESTS.validate_python(arguments)
+        TOOL_REQUESTS.validate_python(arguments)
 
 
 @requires_db
@@ -213,6 +217,7 @@ def test_every_tool_returns_evidence_at_the_replay_cutoff(case: CaseFixture) -> 
     for result, arguments in zip(results, calls, strict=True):
         assert isinstance(result, DatabaseEvidence)
         assert DatabaseEvidence.model_validate_json(result.model_dump_json()) == result
+        assert result.cutoff.dataset_id
         assert result.cutoff.source_sequence == FOCAL
         assert result.cutoff.occurred_at == AT
         assert result.observation.tool == arguments["tool"]
@@ -283,3 +288,74 @@ def test_tool_role_cannot_write_or_read_private_records(case: CaseFixture) -> No
         ):
             connection.execute(text(statement))
         assert isinstance(failure.value.orig, Error) and failure.value.orig.sqlstate == "42501"
+
+
+@requires_db
+def test_policy_tool_shares_the_case_evidence_boundary(case: CaseFixture) -> None:
+    arguments: dict[str, object] = {"tool": "search_policy_docs", "query": "card probing"}
+    result = case.tools.execute(case.scope, 1, arguments)
+    assert isinstance(result, PolicyEvidence)
+    assert result.cutoff.source_sequence == FOCAL
+    assert result.observation.matches[0].policy_id == "P04"
+    assert case.tools.execute(case.scope, 1, arguments) == result
+    with pytest.raises(InvestigationUnavailable):
+        case.tools.execute(
+            case.scope.model_copy(
+                update={
+                    "workspace_id": case.other_workspace,
+                    "analyst_id": case.other_analyst,
+                }
+            ),
+            1,
+            arguments,
+        )
+
+
+@requires_db
+def test_unprocessed_case_is_unavailable_and_replay_advance_cannot_change_evidence(
+    case: CaseFixture,
+) -> None:
+    owner = create_engine(Settings().migration_database_url)
+    arguments: dict[str, object] = {"tool": "velocity_check"}
+    original = case.tools.execute(case.scope, 1, arguments)
+    try:
+        with owner.begin() as connection:
+            connection.execute(
+                text("UPDATE operations.replay_runs SET cursor = 29 WHERE id = :replay"),
+                {"replay": case.replay_id},
+            )
+        assert case.tools.execute(case.scope, 1, arguments) == original
+        with owner.begin() as connection:
+            connection.execute(
+                text("UPDATE operations.replay_runs SET cursor = 25 WHERE id = :replay"),
+                {"replay": case.replay_id},
+            )
+        with pytest.raises(InvestigationUnavailable):
+            case.tools.execute(case.scope, 1, arguments)
+    finally:
+        owner.dispose()
+
+
+@requires_db
+def test_database_failure_preserves_citable_scope(
+    case: CaseFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typing import NoReturn
+
+    from sqlalchemy.exc import OperationalError
+
+    from inquest.investigation.contracts import UnavailableEvidence
+    from inquest.investigation.repository import Observations
+
+    def unavailable(_: Observations) -> NoReturn:
+        raise OperationalError(None, None, OSError("database unavailable"))
+
+    arguments: dict[str, object] = {"tool": "velocity_check"}
+    original = case.tools.execute(case.scope, 1, arguments)
+    with monkeypatch.context() as patch:
+        patch.setattr(Observations, "velocity", unavailable)
+        failed = case.tools.execute(case.scope, 1, arguments)
+    assert isinstance(failed, UnavailableEvidence)
+    assert failed.reason == "data_unavailable"
+    assert failed.evidence_id == original.evidence_id and failed.cutoff == original.cutoff
+    assert case.tools.execute(case.scope, 1, arguments) == original

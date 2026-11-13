@@ -16,6 +16,8 @@ flowchart LR
 
 ## Graph and tool boundary
 
+See the [implemented Phase 3 contracts and retrieval results](INVESTIGATION_TOOLS.md).
+
 Use a LangGraph `StateGraph` with Pydantic models at tool, provider and API boundaries. The initial state contains investigation ID, scoped transaction reference, immutable cutoff, score and signed feature contributions, versioned configuration, and remaining budget. Triage chooses a small initial evidence set. The model proposes additional tool calls or ends the loop. The orchestrator validates arguments and executes from a fixed registry. Each call binds workspace, transaction and cutoff server-side. Cap rows and bytes before serializing observations. [LangGraph checkpointers](https://docs.langchain.com/oss/python/langgraph/checkpointers)
 
 | Tool | Typed observation |

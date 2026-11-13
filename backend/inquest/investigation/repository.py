@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +11,7 @@ from inquest.investigation.contracts import (
     Activity,
     CustomerHistoryObservation,
     CustomerProfileObservation,
+    Cutoff,
     DeviceObservation,
     GeoObservation,
     HistoryAttempt,
@@ -38,21 +38,15 @@ class InvestigationUnavailable(Exception):
     """The scoped investigation or its replay position is unavailable."""
 
 
-@dataclass(frozen=True)
-class CasePosition:
-    dataset_id: str
-    source_sequence: int
-
-
-def resolve_case(
-    connection: Connection, workspace_id: UUID, investigation_id: UUID
-) -> CasePosition:
+def resolve_case(connection: Connection, workspace_id: UUID, investigation_id: UUID) -> Cutoff:
     row = connection.execute(
         text("""
-            SELECT c.dataset_id, c.source_sequence
+            SELECT c.dataset_id, c.source_sequence, t.occurred_at
             FROM operations.investigations AS i
             JOIN operations.cases AS c ON (c.workspace_id, c.id) = (i.workspace_id, i.case_id)
             JOIN operations.replay_runs AS r ON (r.id, r.dataset_id) = (c.replay_id, c.dataset_id)
+            JOIN fixture.transactions AS t
+                ON (t.dataset_id, t.source_sequence) = (c.dataset_id, c.source_sequence)
             WHERE i.workspace_id = :workspace AND i.id = :investigation
                 AND c.source_sequence <= r.cursor
         """),
@@ -60,10 +54,14 @@ def resolve_case(
     ).one_or_none()
     if row is None:
         raise InvestigationUnavailable
-    return CasePosition(row.dataset_id, row.source_sequence)
+    return Cutoff(
+        dataset_id=row.dataset_id,
+        source_sequence=row.source_sequence,
+        occurred_at=row.occurred_at.astimezone(UTC),
+    )
 
 
-def focal_transaction(connection: Connection, position: CasePosition) -> Transaction:
+def focal_transaction(connection: Connection, position: Cutoff) -> Transaction:
     row = (
         connection.execute(
             text(f"""
@@ -84,7 +82,7 @@ def focal_transaction(connection: Connection, position: CasePosition) -> Transac
 class Observations:
     """Read evidence at the focal transaction's immutable event key."""
 
-    def __init__(self, connection: Connection, position: CasePosition, focal: Transaction) -> None:
+    def __init__(self, connection: Connection, position: Cutoff, focal: Transaction) -> None:
         self._connection = connection
         self.focal = focal
         self._params = {

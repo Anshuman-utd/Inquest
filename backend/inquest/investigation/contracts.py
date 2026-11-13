@@ -43,6 +43,7 @@ DatabaseRequest = Annotated[EntityRequest | HistoryRequest, Field(discriminator=
 
 
 class Cutoff(Contract):
+    dataset_id: str
     occurred_at: datetime
     source_sequence: int
 

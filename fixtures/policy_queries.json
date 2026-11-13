@@ -1,0 +1,20 @@
+[
+  {"query": "What would justify clearing a flagged payment when the history supports it?", "relevant_policy": "P01"},
+  {"query": "What belongs in the handoff to the next analyst on an unresolved multi-customer case?", "relevant_policy": "P02"},
+  {"query": "SIM swap followed by unusual transfers to a recipient the customer has never used", "relevant_policy": "P03"},
+  {"query": "Several tiny authorizations were declined across different payment instruments", "relevant_policy": "P04"},
+  {"query": "A customer made many purchases in minutes after retrying a failed payment", "relevant_policy": "P05"},
+  {"query": "Two physical locations are far apart. Could the customer have made the trip?", "relevant_policy": "P06"},
+  {"query": "How do I interpret an unseen identifier after a handset replacement?", "relevant_policy": "P07"},
+  {"query": "A single expensive purchase stands out against a sparse spending history", "relevant_policy": "P08"},
+  {"query": "Multiple senders made UPI transfers to one recipient during a fundraiser", "relevant_policy": "P09"},
+  {"query": "Customers share a device and many charges have the same price at one merchant", "relevant_policy": "P10"},
+  {"query": "The payer thought they would receive money, but accepting the request authorized a debit", "relevant_policy": "P11"},
+  {"query": "The observation is unavailable. How should I record that gap in the analyst note?", "relevant_policy": "P12"},
+  {"query": "How can I distinguish card probing from valid low-price purchases?", "relevant_policy": "P04"},
+  {"query": "Does an IP location establish impossible travel after a remote checkout?", "relevant_policy": "P06"},
+  {"query": "Can a missing device identifier be treated as new?", "relevant_policy": "P07"},
+  {"query": "Is a payment request from a familiar invoice issuer potentially legitimate?", "relevant_policy": "P11"},
+  {"query": "volcanic ash cloud meteorology", "relevant_policy": null},
+  {"query": "what should i do?", "relevant_policy": null}
+]
