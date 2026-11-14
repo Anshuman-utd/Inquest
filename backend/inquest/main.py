@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from inquest.db.tenant import TenantDatabase
+from inquest.evaluation.agent_api import evaluation_router
 from inquest.investigation.api import investigation_router, supervise
 from inquest.investigation.graph import Steps
 from inquest.investigation.policy import PolicyIndex
@@ -84,6 +85,7 @@ ip_key = (
 )
 app.include_router(investigation_router(investigations, ip_key))
 app.include_router(scoring_router(engine, scorer))
+app.include_router(evaluation_router(settings.evaluation_reports_directory))
 
 
 @app.get("/health", tags=["operations"])

@@ -46,3 +46,11 @@ Use the synthetic world for the first milestone. The ULB credit-card data suppor
 ## Phase 2 default cohort
 
 The 180-day default fixture uses day offsets 0–29 for history warm-up, 30–107 for fitting, 108–119 for calibration, 120–149 for operating-point selection, and 150–179 for the final test. Use half-open UTC windows. Exclude every labeled episode spanning a split boundary from metric and fitting cohorts, while retaining its observable transactions in historical features. The shift fixture uses seed 1730, 15% higher category medians and 20% higher activity. Use the same locked model, calibration and threshold for both test windows.
+
+## Phase 5 sampling and reporting
+
+The original comparison uses the locked Phase 2 scorer and independent test world seed 2105. The shifted confirmation uses seed 2106, 15% larger category medians, and 20% higher activity. The live validation pilot uses seed 2104. The first 30 days supply history. Episodes crossing warm-up are omitted from metrics. The sampled alert IDs, fixture configuration, scorer hash, threshold, group sizes, and sampling seed are frozen before each run.
+
+The paid-equivalent cost uses provider-reported input and output tokens at public list prices. Quota accounting also includes conservative reservations for failed responses. Latency measures time inside the graph and includes request retries. Pacing between cases is excluded. Billing is reported only when independently verified.
+
+Sample each fraud scenario and two legitimate strata (routine and scenario-tagged) under free-tier quota. Use inverse inclusion weights for population estimates and publish the raw sample counts beside them. A single sampled case per fraud scenario makes its individual result descriptive. The design does not support an episode-clustered uncertainty interval for the fraud strata.

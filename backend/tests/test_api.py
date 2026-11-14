@@ -49,3 +49,11 @@ def test_scorer_contract_and_missing_transaction() -> None:
     assert len(score["top_contributions"]) == 5
     assert missing.status_code == 404
     assert invalid.status_code == 422
+
+
+def test_evaluation_api_returns_versioned_public_metrics() -> None:
+    with TestClient(app) as client:
+        outcome = client.get("/api/v1/evaluations")
+        assert outcome.status_code == 200
+        assert outcome.json()["schema_version"] == 1
+        assert isinstance(outcome.json()["reports"], list)

@@ -27,3 +27,4 @@ class Settings(BaseSettings):
     evaluation_database_url: str = (
         "postgresql+psycopg://inquest_eval:local_eval@localhost:5434/inquest"
     )
+    evaluation_reports_directory: Path = Path("fixtures/evaluations")
