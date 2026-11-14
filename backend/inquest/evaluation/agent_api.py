@@ -14,6 +14,7 @@ class EvaluationReport(BaseModel):
     run_ids: dict[Arm, UUID]
     cohort: dict[str, Any]
     arms: dict[Arm, dict[str, Any]]
+    provenance: dict[Arm, dict[str, Any]]
 
 
 class PublishedEvaluations(BaseModel):

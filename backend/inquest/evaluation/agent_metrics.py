@@ -25,6 +25,7 @@ def aggregate(manifest: CohortManifest, rows: list[dict[str, Any]]) -> dict[str,
         raise ValueError("incomplete cohort")
     counts: Counter[tuple[str, str]] = Counter()
     groups: dict[str, Counter[str]] = {}
+    per_scenario: dict[str, Counter[str]] = {}
     failure_codes: Counter[str] = Counter()
     for row in rows:
         label = "fraud" if row["is_fraud"] else "legit"
@@ -32,12 +33,19 @@ def aggregate(manifest: CohortManifest, rows: list[dict[str, Any]]) -> dict[str,
         counts[label, action] += row["weight"]
         group = groups.setdefault(row["stratum"], Counter())
         group[action] += 1
+        scenario = row.get("scenario") or "routine"
+        scenario_counts = per_scenario.setdefault(f"{label}/{scenario}", Counter())
+        scenario_counts[action] += 1
+        if (label, action) in {("fraud", "block"), ("legit", "release")}:
+            scenario_counts["correct_resolved"] += 1
         if row.get("failure"):
             group["failures"] += 1
+            scenario_counts["failures"] += 1
             failure_codes[row.get("fallback_reason") or row["failure"]] += 1
             counts[label, "failure"] += row["weight"]
         if row.get("grounded") is False and not row.get("failure"):
             group["unsupported"] += 1
+            scenario_counts["unsupported"] += 1
     fraud = sum(row["weight"] for row in rows if row["is_fraud"])
     legit = sum(row["weight"] for row in rows if not row["is_fraud"])
     retained = fraud - counts["fraud", "release"]
@@ -51,8 +59,16 @@ def aggregate(manifest: CohortManifest, rows: list[dict[str, Any]]) -> dict[str,
         all(f"fraud/{name}" in classes_covered for name in manifest.alerted_fraud_by_scenario)
         and abs(legit + fraud - manifest.alerted) < 1e-8
     )
-    latencies = sorted(row["latency_seconds"] for row in rows if "latency_seconds" in row)
-    p95 = latencies[(95 * len(latencies) + 99) // 100 - 1] if latencies else None
+
+    def timing(selected: list[dict[str, Any]]) -> dict[str, float | int | None]:
+        latencies = sorted(row["latency_seconds"] for row in selected if "latency_seconds" in row)
+        return {
+            "cases": len(latencies),
+            "p50_seconds": median(latencies) if latencies else None,
+            "p95_seconds": latencies[(95 * len(latencies) + 99) // 100 - 1] if latencies else None,
+        }
+
+    latency = timing(rows)
     input_tokens = sum(row.get("input_tokens", 0) for row in rows)
     output_tokens = sum(row.get("output_tokens", 0) for row in rows)
     grounded_values = [row["grounded"] for row in rows if row["grounded"] is not None]
@@ -96,6 +112,7 @@ def aggregate(manifest: CohortManifest, rows: list[dict[str, Any]]) -> dict[str,
         "grounded_sample": sum(grounded_values),
         "grounding_denominator": len(grounded_values),
         "scenarios": {key: dict(value) for key, value in sorted(groups.items())},
+        "per_scenario": {key: dict(value) for key, value in sorted(per_scenario.items())},
         "failure_codes": dict(failure_codes),
         "tool_calls": sum(row["tool_calls"] for row in rows),
         "mean_tool_calls": fmean(row["tool_calls"] for row in rows),
@@ -109,26 +126,44 @@ def aggregate(manifest: CohortManifest, rows: list[dict[str, Any]]) -> dict[str,
         "equivalent_list_cost_usd": (input_tokens * INPUT_PRICE + output_tokens * OUTPUT_PRICE)
         / 1e6,
         "actual_cost_usd": None,
-        "p50_seconds": median(latencies) if latencies else None,
-        "p95_seconds": p95,
+        "p50_seconds": latency["p50_seconds"],
+        "p95_seconds": latency["p95_seconds"],
+        "live_latency": timing([row for row in rows if row["requests"]]),
+        "cache_only_latency": timing(
+            [row for row in rows if row["cache_hits"] and not row["requests"]]
+        ),
     }
 
 
-def publish(path: Path) -> None:
+def publish(path: Path, public_output: Path | None = None) -> None:
     data = json.loads(path.read_text())
     manifest = CohortManifest.model_validate(data["cohort"])
     metrics = {arm: aggregate(manifest, rows) for arm, rows in data["rows"].items()}
     engine = create_engine(Settings().evaluation_database_url)
+    provenance: dict[str, Any] = {}
     try:
         with engine.begin() as db:
             for arm, result in metrics.items():
-                db.execute(
+                config = db.execute(
                     text("""
                     UPDATE evaluation.eval_runs SET metrics = CAST(:metrics AS jsonb)
-                    WHERE id = :run
+                    WHERE id = :run RETURNING configuration
                 """),
                     {"run": UUID(data["run_ids"][arm]), "metrics": json.dumps(result)},
-                )
+                ).scalar_one()
+                provenance[arm] = {
+                    key: config[key]
+                    for key in (
+                        "git",
+                        "graph_sha256",
+                        "policy_sha256",
+                        "provider",
+                        "cache_only",
+                        "revision",
+                        "global_daily_tokens",
+                    )
+                    if key in config
+                }
     finally:
         engine.dispose()
     output = path.with_name("metrics.json")
@@ -139,10 +174,20 @@ def publish(path: Path) -> None:
         "arms": metrics,
     }
     output.write_text(json.dumps(summary, indent=2) + "\n")
+    if public_output is not None:
+        public_output.parent.mkdir(parents=True, exist_ok=True)
+        summary["revision"] = next(iter(provenance.values()))["revision"]
+        summary["provenance"] = provenance
+        summary["cohort"] = {
+            key: value for key, value in data["cohort"].items() if key != "samples"
+        }
+        public_output.write_text(json.dumps(summary, indent=2) + "\n")
     print(output)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Aggregate and publish agent evaluation metrics")
     parser.add_argument("results", type=Path)
-    publish(parser.parse_args().results)
+    parser.add_argument("--public-output", type=Path)
+    args = parser.parse_args()
+    publish(args.results, args.public_output)

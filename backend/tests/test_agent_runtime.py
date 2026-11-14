@@ -102,7 +102,7 @@ def service(gateway: ModelGateway | None = None) -> Investigations:
             tenant,
             tools,
             gateway,
-            settings.global_daily_tokens,
+            2**31 - 1,
             Recordings(settings.recordings_file),
         ),
         settings,
