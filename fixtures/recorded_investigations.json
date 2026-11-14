@@ -1,0 +1,12 @@
+[
+  {
+    "dataset_id": "v1-6ad7511a3aebaf4750c16dcd506c93bb04962a0c03867087ae58a41551d120e9",
+    "source_sequence": 150,
+    "verdict": "needs_human_review",
+    "recommended_action": "escalate",
+    "confidence": 0,
+    "facts": [
+      {"tool": "get_transaction", "field": "transaction.source_sequence", "value": 150}
+    ]
+  }
+]
