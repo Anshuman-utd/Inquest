@@ -14,6 +14,7 @@ from sqlalchemy import create_engine, text
 
 from inquest.db.tenant import TenantDatabase
 from inquest.evaluation.agent_cohort import CohortManifest, Sample
+from inquest.evaluation.evidence_plan import next_evidence, synthesize_evidence
 from inquest.investigation.contracts import ToolScope
 from inquest.investigation.demo import provision
 from inquest.investigation.graph import EVIDENCE, State, Steps, build_graph
@@ -70,6 +71,26 @@ class EvaluationSteps(Steps):
         self.policy_enabled = arm != "no_policy"
         self.usage = Usage()
 
+    def model(self, state: State, instructions: str, *, reserve_report: bool = False) -> str:
+        # Session-specific IDs do not affect the model input or the response-cache key.
+        # Restore the current run's evidence IDs before verification and persistence.
+        ids = {
+            item["evidence_id"]: str(uuid5(NAMESPACE, str(item["call_sequence"])))
+            for item in state.get("observations", [])
+        }
+        canonical = [
+            {**item, "evidence_id": ids[item["evidence_id"]]}
+            for item in state.get("observations", [])
+        ]
+        result = super().model(
+            {**state, "observations": canonical},
+            instructions,
+            reserve_report=reserve_report,
+        )
+        for actual, alias in ids.items():
+            result = result.replace(alias, actual)
+        return result
+
     def observe_model(
         self,
         kind: Literal["request", "retry", "cache", "response"],
@@ -97,7 +118,14 @@ class EvaluationSteps(Steps):
     def plan(self, state: State) -> State:
         if self.arm == "no_tools":
             return {"request": None}
+        if self.revision == "focused":
+            return next_evidence(state, policy=self.policy_enabled)
         return super().plan(state)
+
+    def synthesize(self, state: State) -> State:
+        if self.revision == "focused":
+            return synthesize_evidence(self, state)
+        return super().synthesize(state)
 
     def check(self, state: State) -> State:
         if self.arm == "no_self_check" and state.get("draft"):
@@ -117,11 +145,11 @@ def graph_digest() -> str:
     for name in ("graph.py", "reports.py", "provider.py", "tools.py", "policy.py", "repository.py"):
         digest.update((ROOT / name).read_bytes())
     digest.update(Path(__file__).read_bytes())
+    digest.update(Path("backend/inquest/evaluation/evidence_plan.py").read_bytes())
     return digest.hexdigest()
 
 
 def evaluate(
-    settings: Settings,
     steps: EvaluationSteps,
     manifest: CohortManifest,
     sample: Sample,
@@ -252,6 +280,7 @@ def run(
                 "graph_sha256": graph_digest(),
                 "policy_sha256": index.corpus_sha256,
                 "cache_only": cache_only,
+                "global_daily_tokens": settings.global_daily_tokens,
             }
             identity = json.dumps(
                 {key: value for key, value in config.items() if key != "git"}, sort_keys=True
@@ -303,7 +332,7 @@ def run(
                 if stored is None:
                     if arm != "ml_only" and not cache_only:
                         provider.wait_for_capacity()
-                    result = evaluate(settings, steps[arm], manifest, sample)
+                    result = evaluate(steps[arm], manifest, sample)
                     stored = {
                         **sample.model_dump(),
                         **dict(label),
@@ -345,7 +374,7 @@ def main() -> None:
     parser.add_argument("manifest", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--arms", nargs="+", choices=ARMS, default=ARMS)
-    parser.add_argument("--revision", choices=("initial",), default="initial")
+    parser.add_argument("--revision", choices=("initial", "focused"), default="initial")
     parser.add_argument("--cache-only", action="store_true")
     args = parser.parse_args()
     manifest = CohortManifest.model_validate_json(args.manifest.read_text())
