@@ -37,6 +37,8 @@ class Report(Draft):
 
 
 def verify(draft: Draft, results: list[ToolEvidence]) -> Report:
+    if not draft.evidence:
+        raise ValueError("verified report requires a cited fact")
     successful = {item.evidence_id: item for item in results if item.status == "ok"}
     distinct = set()
     supporting_tools = set()

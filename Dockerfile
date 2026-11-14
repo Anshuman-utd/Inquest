@@ -17,8 +17,9 @@ COPY backend ./backend
 COPY fixtures ./fixtures
 COPY models ./models
 COPY policies ./policies
-RUN useradd --system --no-create-home inquest
+RUN useradd --system --no-create-home inquest \
+    && install -d -o inquest /app/cache
 USER inquest
 
 EXPOSE 8000
-CMD ["uvicorn", "inquest.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "inquest.main:app", "--host", "0.0.0.0", "--no-proxy-headers", "--port", "8000"]

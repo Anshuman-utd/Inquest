@@ -127,6 +127,8 @@ class ModelGateway:
         key = hashlib.sha256(
             json.dumps([self.provider.identity, output, prompt], ensure_ascii=False).encode()
         ).hexdigest()
+        if deadline <= monotonic():
+            raise ProviderUnavailable("deadline_exhausted")
         if (cached := self.cache.get(key)) is not None:
             return cached.content
         if self.cache_only:

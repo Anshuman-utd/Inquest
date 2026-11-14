@@ -15,7 +15,7 @@ from inquest.db.tenant import TenantDatabase
 from inquest.investigation.contracts import ToolScope
 from inquest.investigation.provider import ModelGateway, ProviderUnavailable
 from inquest.investigation.replay import Recordings
-from inquest.investigation.reports import Draft, Report, verify
+from inquest.investigation.reports import Draft, Fact, Report, verify
 from inquest.investigation.runtime import event, locked_run, reserve_tokens
 from inquest.investigation.tools import TOOL_REQUESTS, InvestigationTools, ToolEvidence
 
@@ -39,6 +39,7 @@ class State(TypedDict, total=False):
     score: dict[str, Any]
     replay: bool
     fallback_reason: str
+    recording_missing: bool
 
 
 class Steps:
@@ -82,6 +83,11 @@ class Steps:
         context_data: dict[str, Any] = {
             "score": score.get("score"),
             "threshold": score.get("threshold"),
+            "top_features": [
+                item.get("feature")
+                for item in (score.get("contributions") or [])[:2]
+                if isinstance(item, dict)
+            ],
             "observations": [],
         }
         for item in evidence:
@@ -246,10 +252,13 @@ class Steps:
             )
             if choice == {"tool": "done"}:
                 return {"request": None, "plans": count + 1}
-            return {
-                "request": TOOL_REQUESTS.validate_python(choice).model_dump(mode="json"),
-                "plans": count + 1,
-            }
+            requested = TOOL_REQUESTS.validate_python(choice).model_dump(mode="json")
+            if any(
+                item.get("observation", {}).get("tool", item.get("tool")) == requested["tool"]
+                for item in previous
+            ):
+                return {"request": None, "plans": count + 1}
+            return {"request": requested, "plans": count + 1}
         except (ProviderUnavailable, ValueError):
             return {"request": None, "plans": count + 1}
 
@@ -298,13 +307,33 @@ class Steps:
             if state.get("error") == "provider_unavailable"
             else "invalid_report"
         )
+        transaction = next(
+            (
+                item
+                for item in results
+                if item.status == "ok" and item.observation.tool == "get_transaction"
+            ),
+            None,
+        )
+        facts = (
+            (
+                Fact(
+                    evidence_id=transaction.evidence_id,
+                    field="transaction.source_sequence",
+                    value=transaction.cutoff.source_sequence,
+                ),
+            )
+            if transaction is not None
+            else ()
+        )
         return {
             "error": "",
+            "recording_missing": reason == "provider_unavailable",
             "report": Report(
                 verdict="needs_human_review",
                 confidence=0,
                 recommended_action="escalate",
-                evidence=(),
+                evidence=facts,
                 status="inconclusive",
                 reason=reason,
             ).model_dump(mode="json"),
@@ -328,6 +357,17 @@ class Steps:
                     "recording_used",
                     {
                         "summary": "Loaded a recorded synthetic recommendation.",
+                        "reason": state.get("fallback_reason"),
+                    },
+                )
+            if state.get("recording_missing"):
+                event(
+                    connection,
+                    scope,
+                    "recording-missing",
+                    "recording_unavailable",
+                    {
+                        "summary": "No recording matched this synthetic transaction.",
                         "reason": state.get("fallback_reason"),
                     },
                 )

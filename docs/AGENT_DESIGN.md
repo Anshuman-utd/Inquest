@@ -14,6 +14,8 @@ flowchart LR
     Approval -->|authorized decision| Finalize
 ```
 
+The [Phase 4 runtime guide](AGENT_RUNTIME.md) describes the implemented graph and local verification.
+
 ## Graph and tool boundary
 
 See the [implemented Phase 3 contracts and retrieval results](INVESTIGATION_TOOLS.md).

@@ -4,9 +4,13 @@
     "source_sequence": 150,
     "verdict": "needs_human_review",
     "recommended_action": "escalate",
-    "confidence": 0,
+    "confidence": 0.55,
     "facts": [
-      {"tool": "get_transaction", "field": "transaction.source_sequence", "value": 150}
+      {
+        "field": "transaction.source_sequence",
+        "value": 150,
+        "tool": "get_transaction"
+      }
     ]
   }
 ]

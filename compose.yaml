@@ -17,7 +17,7 @@ services:
       retries: 20
   migrate:
     build: .
-    command: ["alembic", "upgrade", "head"]
+    command: ["sh", "-c", "alembic upgrade head && python -m inquest.investigation.checkpoints"]
     environment:
       INQUEST_MIGRATION_DATABASE_URL: postgresql+psycopg://inquest_migrator:local_migrator@db:5432/inquest
     depends_on:
@@ -36,7 +36,12 @@ services:
     mem_limit: 512m
     environment:
       INQUEST_DATABASE_URL: postgresql+psycopg://inquest_api:local_api@db:5432/inquest
+      INQUEST_GROQ_API_KEY: ${INQUEST_GROQ_API_KEY:-}
+      INQUEST_IP_HASH_SECRET: ${INQUEST_IP_HASH_SECRET:-}
+      INQUEST_PROVIDER_CACHE: /app/cache/responses.sqlite
       INQUEST_TOOL_DATABASE_URL: postgresql+psycopg://inquest_tool:local_tool@db:5432/inquest
+    volumes:
+      - response_cache:/app/cache
     ports:
       - "127.0.0.1:${INQUEST_API_PORT:-8000}:8000"
     healthcheck:
@@ -53,3 +58,4 @@ services:
         condition: service_completed_successfully
 volumes:
   postgres_data:
+  response_cache:

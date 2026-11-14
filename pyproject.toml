@@ -52,5 +52,5 @@ strict = true
 files = ["backend"]
 
 [[tool.mypy.overrides]]
-module = ["lightgbm", "sklearn.*"]
+module = ["lightgbm", "sklearn.*", "google.genai.*"]
 ignore_missing_imports = true

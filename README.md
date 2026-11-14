@@ -4,9 +4,9 @@ Inquest is a portfolio project for investigating synthetic card and UPI-style pa
 
 **Synthetic data only. Don’t enter real personal data.**
 
-## Phase 3 status
+## Phase 4 status
 
-The API scores shared synthetic transactions with a small LightGBM model and returns signed TreeSHAP contributions. Postgres holds the shared fixture, evaluation truth, and workspace-scoped case records. The [investigation tool layer](docs/INVESTIGATION_TOOLS.md) gathers scoped evidence and retrieves versioned policy excerpts. GitHub OAuth signup, quota enforcement, provider caching and investigation replay are planned for the phases that expose hosted access and live investigations.
+The API scores shared synthetic transactions with a small LightGBM model and returns signed TreeSHAP contributions. Postgres holds the shared fixture, evaluation truth, and workspace-scoped case records. The [investigation tool layer](docs/INVESTIGATION_TOOLS.md) gathers scoped evidence and retrieves versioned policy excerpts. The [investigation runtime](docs/AGENT_RUNTIME.md) adds LangGraph checkpoints, grounded reports, analyst approval, budgets, and reconnectable SSE. Hosted GitHub OAuth signup and its rate limits are planned for the hosted access work.
 
 ## Local development
 

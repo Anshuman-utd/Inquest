@@ -2,11 +2,13 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid4
 
 from langgraph.types import Command
 from sqlalchemy import Connection, Engine, text
+from sqlalchemy.exc import OperationalError
 
 from inquest.db.tenant import TenantDatabase, WorkspaceAccessDenied
 from inquest.investigation.checkpoints import checkpoint_connection
@@ -114,6 +116,7 @@ class Investigations:
             return scope.investigation_id
 
     def decide(self, scope: ToolScope, request: DecisionRequest, key: str) -> UUID:
+        fingerprint = {"sha256": sha256(request.model_dump_json().encode()).hexdigest()}
         with self.scoped(scope) as connection:
             connection.execute(
                 text("SELECT pg_advisory_xact_lock(hashtext(:workspace))"),
@@ -134,7 +137,7 @@ class Investigations:
                     len(prior) == 1
                     and previous.idempotency_key == key
                     and previous.analyst_id == scope.analyst_id
-                    and previous.request_payload == request.model_dump(mode="json")
+                    and previous.request_payload == fingerprint
                     and previous.investigation_id == scope.investigation_id
                 ):
                     return UUID(str(previous.id))
@@ -161,7 +164,7 @@ class Investigations:
                 "action": action,
                 "version": version,
                 "key": key,
-                "payload": json.dumps(request.model_dump(mode="json")),
+                "payload": json.dumps(fingerprint),
                 "note": request.note.strip(),
             }
             connection.execute(
@@ -240,6 +243,9 @@ class Investigations:
             scope = ToolScope.model_validate(dict(job))
             try:
                 self._process(connection, scope)
+            except OperationalError:
+                # Leave the job durable when the database or connection is unavailable.
+                raise
             except WorkspaceAccessDenied:
                 self._dequeue(scope)
             except Exception:
