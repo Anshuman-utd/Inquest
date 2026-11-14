@@ -1,0 +1,256 @@
+{
+  "name": "confirmation",
+  "config": {
+    "seed": 2106,
+    "start": "2025-11-01T00:00:00Z",
+    "days": 150,
+    "currency": "INR",
+    "timezone": "Asia/Kolkata",
+    "customer_count": 650,
+    "merchant_count": 160,
+    "attempts_per_customer_week": 4.2,
+    "fraud_rate": 0.005,
+    "lookalikes_per_fraud_episode": 2,
+    "cities": [
+      {
+        "id": "mumbai",
+        "name": "Mumbai",
+        "latitude": 19.076,
+        "longitude": 72.8777
+      },
+      {
+        "id": "delhi",
+        "name": "Delhi",
+        "latitude": 28.6139,
+        "longitude": 77.209
+      },
+      {
+        "id": "bengaluru",
+        "name": "Bengaluru",
+        "latitude": 12.9716,
+        "longitude": 77.5946
+      },
+      {
+        "id": "pune",
+        "name": "Pune",
+        "latitude": 18.5204,
+        "longitude": 73.8567
+      },
+      {
+        "id": "hyderabad",
+        "name": "Hyderabad",
+        "latitude": 17.385,
+        "longitude": 78.4867
+      },
+      {
+        "id": "chennai",
+        "name": "Chennai",
+        "latitude": 13.0827,
+        "longitude": 80.2707
+      },
+      {
+        "id": "kolkata",
+        "name": "Kolkata",
+        "latitude": 22.5726,
+        "longitude": 88.3639
+      }
+    ],
+    "amounts": [
+      {
+        "category": "groceries",
+        "median_minor": 109250,
+        "log_sigma": 0.65,
+        "weight": 26.0
+      },
+      {
+        "category": "dining",
+        "median_minor": 69000,
+        "log_sigma": 0.7,
+        "weight": 19.0
+      },
+      {
+        "category": "transport",
+        "median_minor": 31050,
+        "log_sigma": 0.8,
+        "weight": 18.0
+      },
+      {
+        "category": "retail",
+        "median_minor": 299000,
+        "log_sigma": 0.9,
+        "weight": 17.0
+      },
+      {
+        "category": "utilities",
+        "median_minor": 184000,
+        "log_sigma": 0.6,
+        "weight": 9.0
+      },
+      {
+        "category": "transfer",
+        "median_minor": 172500,
+        "log_sigma": 1.0,
+        "weight": 9.0
+      },
+      {
+        "category": "cash_like",
+        "median_minor": 287500,
+        "log_sigma": 0.75,
+        "weight": 2.0
+      }
+    ]
+  },
+  "dataset_id": "v1-19767bcdc8055661bf77954dd97ecd8d7fbbd92fdaab7ce2c7fcb376c918863e",
+  "model_version": "lgbm-5e143a31879bae22",
+  "model_sha256": "9600c847125f85799002aab98b4a977e0f73228ebe136ae67d54b9a5c4ceb04b",
+  "threshold": 0.008786782651795052,
+  "sampling_seed": 715,
+  "sample_sha256": "9a148d7ff907d170747ac4d018b7182561c7b981a86104cd0c7e53681716b482",
+  "attempts": 47384,
+  "fraud": 203,
+  "alerted": 1055,
+  "alerted_fraud": 187,
+  "fraud_by_scenario": {
+    "merchant_collusion": 27,
+    "mule_cash_out": 35,
+    "velocity_burst": 28,
+    "account_takeover": 23,
+    "impossible_travel": 7,
+    "card_testing": 37,
+    "new_device_high_value": 9,
+    "upi_sim_swap": 18,
+    "upi_collect_scam": 19
+  },
+  "alerted_fraud_by_scenario": {
+    "merchant_collusion": 27,
+    "mule_cash_out": 29,
+    "velocity_burst": 22,
+    "account_takeover": 23,
+    "impossible_travel": 7,
+    "card_testing": 37,
+    "new_device_high_value": 9,
+    "upi_sim_swap": 18,
+    "upi_collect_scam": 15
+  },
+  "samples": [
+    {
+      "sequence": 17877,
+      "stratum": "fraud/card_testing",
+      "population": 37,
+      "sampled": 1,
+      "score": 0.43624500002953703
+    },
+    {
+      "sequence": 17885,
+      "stratum": "fraud/new_device_high_value",
+      "population": 9,
+      "sampled": 1,
+      "score": 0.2707401883796269
+    },
+    {
+      "sequence": 25627,
+      "stratum": "fraud/mule_cash_out",
+      "population": 29,
+      "sampled": 1,
+      "score": 0.18874231839133096
+    },
+    {
+      "sequence": 26714,
+      "stratum": "fraud/upi_collect_scam",
+      "population": 15,
+      "sampled": 1,
+      "score": 0.12690942738605965
+    },
+    {
+      "sequence": 28573,
+      "stratum": "fraud/impossible_travel",
+      "population": 7,
+      "sampled": 1,
+      "score": 0.25773032097027154
+    },
+    {
+      "sequence": 30877,
+      "stratum": "fraud/upi_sim_swap",
+      "population": 18,
+      "sampled": 1,
+      "score": 0.4577562753758679
+    },
+    {
+      "sequence": 31921,
+      "stratum": "fraud/velocity_burst",
+      "population": 22,
+      "sampled": 1,
+      "score": 0.3322636498296566
+    },
+    {
+      "sequence": 33804,
+      "stratum": "legit/routine",
+      "population": 537,
+      "sampled": 4,
+      "score": 0.5878055551751133
+    },
+    {
+      "sequence": 42163,
+      "stratum": "legit/scenario",
+      "population": 331,
+      "sampled": 4,
+      "score": 0.670704654206038
+    },
+    {
+      "sequence": 46670,
+      "stratum": "fraud/account_takeover",
+      "population": 23,
+      "sampled": 1,
+      "score": 0.3788657679633439
+    },
+    {
+      "sequence": 46684,
+      "stratum": "fraud/merchant_collusion",
+      "population": 27,
+      "sampled": 1,
+      "score": 0.3293464442668535
+    },
+    {
+      "sequence": 47833,
+      "stratum": "legit/scenario",
+      "population": 331,
+      "sampled": 4,
+      "score": 0.2984546478081437
+    },
+    {
+      "sequence": 49209,
+      "stratum": "legit/routine",
+      "population": 537,
+      "sampled": 4,
+      "score": 0.014740558843248217
+    },
+    {
+      "sequence": 50760,
+      "stratum": "legit/routine",
+      "population": 537,
+      "sampled": 4,
+      "score": 0.011636154845965162
+    },
+    {
+      "sequence": 52390,
+      "stratum": "legit/scenario",
+      "population": 331,
+      "sampled": 4,
+      "score": 0.3137743671710523
+    },
+    {
+      "sequence": 52457,
+      "stratum": "legit/scenario",
+      "population": 331,
+      "sampled": 4,
+      "score": 0.19736507476611645
+    },
+    {
+      "sequence": 57462,
+      "stratum": "legit/routine",
+      "population": 537,
+      "sampled": 4,
+      "score": 0.009483784265779699
+    }
+  ]
+}
