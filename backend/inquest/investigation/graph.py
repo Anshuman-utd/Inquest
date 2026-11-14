@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from inquest.db.tenant import TenantDatabase
 from inquest.investigation.contracts import ToolScope
-from inquest.investigation.provider import ModelGateway, ProviderUnavailable
+from inquest.investigation.provider import Completion, ModelGateway, ProviderUnavailable
 from inquest.investigation.replay import Recordings
 from inquest.investigation.reports import Draft, Fact, Report, verify
 from inquest.investigation.runtime import event, locked_run, reserve_tokens
@@ -56,6 +56,14 @@ class Steps:
         self.gateway = gateway
         self.daily_tokens = daily_tokens
         self.recordings = recordings
+        self.policy_enabled = True
+
+    def observe_model(
+        self,
+        kind: Literal["request", "retry", "cache", "response"],
+        result: Completion | None,
+    ) -> None:
+        pass
 
     def transaction(self, scope: ToolScope) -> Any:
         return self.tenants.transaction(
@@ -138,6 +146,7 @@ class Steps:
             deadline=monotonic() + remaining,
             reserve=reserve,
             reconcile=reconcile,
+            observe=self.observe_model,
         )
 
     def triage(self, state: State) -> State:
@@ -246,13 +255,17 @@ class Steps:
                     state,
                     "Output JSON {tool: name} or {tool: done}. Available: get_customer_profile, "
                     "get_customer_history (window_days 1–30), geo_mismatch_check, device_check, "
-                    "merchant_risk_lookup, search_policy_docs (query). Select one useful tool.",
+                    "merchant_risk_lookup"
+                    + (", search_policy_docs (query)" if self.policy_enabled else "")
+                    + ". Select one useful tool.",
                     reserve_report=True,
                 )
             )
             if choice == {"tool": "done"}:
                 return {"request": None, "plans": count + 1}
             requested = TOOL_REQUESTS.validate_python(choice).model_dump(mode="json")
+            if not self.policy_enabled and requested["tool"] == "search_policy_docs":
+                return {"request": None, "plans": count + 1}
             if any(
                 item.get("observation", {}).get("tool", item.get("tool")) == requested["tool"]
                 for item in previous
@@ -440,7 +453,6 @@ def build_graph(steps: Steps, checkpointer: Any) -> Any:
         graph.add_node(name, RunnableLambda(node))
     for start, end in (
         (START, "triage"),
-        ("triage", "tool"),
         ("tool", "plan"),
         ("synthesize", "verify"),
         ("publish", "approval"),
@@ -448,6 +460,9 @@ def build_graph(steps: Steps, checkpointer: Any) -> Any:
         ("finalize", END),
     ):
         graph.add_edge(start, end)
+    graph.add_conditional_edges(
+        "triage", lambda state: "tool" if state.get("request") else "synthesize"
+    )
     graph.add_conditional_edges(
         "plan", lambda state: "tool" if state.get("request") else "synthesize"
     )

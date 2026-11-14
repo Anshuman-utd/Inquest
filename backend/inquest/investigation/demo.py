@@ -19,7 +19,7 @@ class DemoSession(Contract):
     token: str
 
 
-def provision(sequence: int) -> DemoSession:
+def provision(sequence: int, *, dataset_id: str | None = None) -> DemoSession:
     # Use the migration role only in this local provisioning command.
     from inquest.scoring.model import Scorer
     from inquest.scoring.repository import transaction_features
@@ -38,7 +38,7 @@ def provision(sequence: int) -> DemoSession:
         "workspace": session.workspace_id,
         "analyst": session.analyst_id,
         "hash": sha256(session.token.encode()).hexdigest(),
-        "dataset": scorer.manifest.serving_dataset_id,
+        "dataset": dataset_id or scorer.manifest.serving_dataset_id,
         "replay": str(uuid4()),
         "sequence": sequence,
     }
@@ -46,7 +46,7 @@ def provision(sequence: int) -> DemoSession:
         with engine.begin() as connection:
             features = transaction_features(
                 connection,
-                scorer.manifest.serving_dataset_id,
+                dataset_id or scorer.manifest.serving_dataset_id,
                 sequence,
                 currency=scorer.manifest.currency,
             )

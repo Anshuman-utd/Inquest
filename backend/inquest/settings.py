@@ -24,3 +24,6 @@ class Settings(BaseSettings):
     global_daily_tokens: int = Field(default=100_000, ge=1, le=200_000)
     workspace_daily_investigations: int = Field(default=8, ge=1)
     investigate_per_ip_minute: int = Field(default=10, ge=1)
+    evaluation_database_url: str = (
+        "postgresql+psycopg://inquest_eval:local_eval@localhost:5434/inquest"
+    )

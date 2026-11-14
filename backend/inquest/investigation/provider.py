@@ -6,7 +6,7 @@ from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Protocol
+from typing import Literal, Protocol
 
 from groq import APIConnectionError, APIStatusError, Groq
 from pydantic import Field
@@ -26,6 +26,8 @@ class RetryableProviderError(Exception):
 class Completion(Contract):
     content: str = Field(max_length=16_384)
     tokens: int = Field(ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
 
 
 class Provider(Protocol):
@@ -65,7 +67,10 @@ class GroqProvider:
         if not response.choices or response.usage is None:
             raise ProviderUnavailable("missing_provider_result")
         return Completion(
-            content=response.choices[0].message.content or "", tokens=response.usage.total_tokens
+            content=response.choices[0].message.content or "",
+            tokens=response.usage.total_tokens,
+            input_tokens=response.usage.prompt_tokens,
+            output_tokens=response.usage.completion_tokens,
         )
 
 
@@ -120,6 +125,10 @@ class ModelGateway:
         deadline: float,
         reserve: Callable[[int], None],
         reconcile: Callable[[int, int], None],
+        observe: Callable[
+            [Literal["request", "retry", "cache", "response"], Completion | None], None
+        ]
+        | None = None,
     ) -> str:
         output = 750
         # One token per UTF-8 byte is a conservative text bound. Leave room for message framing.
@@ -130,6 +139,8 @@ class ModelGateway:
         if deadline <= monotonic():
             raise ProviderUnavailable("deadline_exhausted")
         if (cached := self.cache.get(key)) is not None:
+            if observe:
+                observe("cache", cached)
             return cached.content
         if self.cache_only:
             raise ProviderUnavailable("response_cache_miss")
@@ -138,15 +149,21 @@ class ModelGateway:
             if remaining <= 0:
                 raise ProviderUnavailable("deadline_exhausted")
             reserve(reservation)
+            if observe:
+                observe("request", None)
             try:
                 result = self.provider.complete(prompt, output, min(remaining, 15))
             except RetryableProviderError as exc:
                 delay = max(exc.retry_after, 0.5 + random.uniform(0, 0.25))
                 if attempt or delay >= deadline - monotonic():
                     raise ProviderUnavailable("provider_retry_exhausted") from exc
+                if observe:
+                    observe("retry", None)
                 sleep(delay)
                 continue
             reconcile(reservation, result.tokens)
+            if observe:
+                observe("response", result)
             if result.tokens > reservation:
                 raise ProviderUnavailable("provider_usage_exceeded_reservation")
             self.cache.put(key, result)
