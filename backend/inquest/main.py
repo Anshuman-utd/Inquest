@@ -1,17 +1,22 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from secrets import token_bytes
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from inquest.auth.api import auth_router, authenticate
+from inquest.console.api import console_router
+from inquest.console.prepare import ReplayFixture
+from inquest.console.simulator import Simulator
 from inquest.db.tenant import TenantDatabase
 from inquest.evaluation.agent_api import evaluation_router
 from inquest.investigation.api import investigation_router, supervise
+from inquest.investigation.events import EVENTS
 from inquest.investigation.graph import Steps
 from inquest.investigation.policy import PolicyIndex
 from inquest.investigation.provider import GroqProvider, ModelGateway, Provider, ResponseCache
@@ -72,13 +77,18 @@ investigations = Investigations(
 )
 
 
+simulator = Simulator(
+    engine, investigations.tenants, ReplayFixture.read(settings.replay_alerts_file, scorer)
+)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    async with supervise(investigations):
+    async with supervise(investigations, simulator.work_once):
         yield
 
 
-app = FastAPI(title="Inquest", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Inquest", version="0.6.0", lifespan=lifespan)
 ip_key = (
     settings.ip_hash_secret.get_secret_value().encode()
     if settings.ip_hash_secret
@@ -88,6 +98,7 @@ actor = authenticate(investigations.auth, settings.web_origin)
 app.include_router(auth_router(engine, settings, actor, ip_key))
 app.include_router(investigation_router(investigations, ip_key, actor))
 app.include_router(scoring_router(engine, scorer))
+app.include_router(console_router(simulator, actor))
 app.include_router(evaluation_router(settings.evaluation_reports_directory))
 
 
@@ -109,3 +120,18 @@ def ready() -> HealthResponse:
     if ready_dataset is None:
         raise HTTPException(status_code=503, detail="Default scoring fixture unavailable")
     return HealthResponse()
+
+
+def openapi_schema() -> dict[str, Any]:
+    if app.openapi_schema is None:
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        event = EVENTS.json_schema(ref_template="#/components/schemas/{model}")
+        schemas = schema["components"]["schemas"]
+        for name, definition in event.pop("$defs").items():
+            schemas.setdefault(name, definition)
+        schemas["InvestigationEvent"] = event
+        app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = openapi_schema  # type: ignore[method-assign]

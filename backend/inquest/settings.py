@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     )
     scorer_directory: Path = Path("models/scorer")
     tool_database_url: str = "postgresql+psycopg://inquest_tool:local_tool@localhost:5434/inquest"
+    replay_alerts_file: Path = Path("fixtures/replay_alerts.json")
     recordings_file: Path = Path("fixtures/recorded_investigations.json")
     policy_directory: Path = Path("policies")
     ip_hash_secret: SecretStr | None = None

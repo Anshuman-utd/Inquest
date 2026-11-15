@@ -66,7 +66,9 @@ def test_both_oauth_providers_create_and_restore_isolated_workspaces(
     owner = create_engine(settings.migration_database_url)
     app = FastAPI()
     app.include_router(
-        auth_router(api, settings, authenticate(investigations.auth, settings.web_origin), b"key")
+        auth_router(
+            api, settings, authenticate(investigations.auth, settings.web_origin), uuid4().bytes
+        )
     )
     origin = {"Origin": settings.web_origin}
     identities = []

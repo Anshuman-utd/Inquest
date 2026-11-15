@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 from inquest.auth.api import Actor, client_ip_hash
 from inquest.db.tenant import WorkspaceAccessDenied
 from inquest.investigation.contracts import ToolScope
+from inquest.investigation.events import EVENTS
 from inquest.investigation.reports import Report
 from inquest.investigation.repository import InvestigationUnavailable
 from inquest.investigation.runtime import Conflict, DecisionRequest, RateLimited
@@ -38,28 +39,32 @@ class Snapshot(BaseModel):
 
 
 @asynccontextmanager
-async def supervise(service: Investigations) -> AsyncIterator[None]:
+async def supervise(
+    service: Investigations, replay_step: Callable[[], bool] | None = None
+) -> AsyncIterator[None]:
     stopped = asyncio.Event()
 
-    async def worker() -> None:
+    async def worker(step: Callable[[], bool]) -> None:
         while not stopped.is_set():
             try:
-                ready = await run_in_threadpool(service.work_once)
+                ready = await run_in_threadpool(step)
                 delay = 0.05 if ready else 2
             except Exception:
-                log.exception("Investigation supervisor will retry")
+                log.exception("Background worker will retry")
                 delay = 5
             try:
                 await asyncio.wait_for(stopped.wait(), timeout=delay)
             except TimeoutError:
                 pass
 
-    task = asyncio.create_task(worker())
+    tasks = [asyncio.create_task(worker(service.work_once))]
+    if replay_step is not None:
+        tasks.append(asyncio.create_task(worker(replay_step)))
     try:
         yield
     finally:
         stopped.set()
-        await task
+        await asyncio.gather(*tasks)
 
 
 def guarded[T](action: Callable[[], T]) -> T:
@@ -123,7 +128,11 @@ def investigation_router(service: Investigations, ip_key: bytes, actor: Actor) -
         guarded(lambda: service.snapshot(current))
         return current
 
-    @router.get("/investigations/{investigation_id}/events", response_class=EventSourceResponse)
+    @router.get(
+        "/investigations/{investigation_id}/events",
+        response_class=EventSourceResponse,
+        openapi_extra={"x-sse-event-envelope": {"$ref": "#/components/schemas/InvestigationEvent"}},
+    )
     async def events(
         request: Request,
         current_scope: Annotated[ToolScope, Depends(stream_scope)],
@@ -136,7 +145,8 @@ def investigation_router(service: Investigations, ip_key: bytes, actor: Actor) -
             )
             for item in batch:
                 cursor = item["sequence"]
-                yield ServerSentEvent(id=str(cursor), event=item["kind"], data=item["payload"])
+                event = EVENTS.validate_python({"kind": item["kind"], "payload": item["payload"]})
+                yield ServerSentEvent(id=str(cursor), event=event.kind, data=event.payload)
             if len(batch) < 50 and row["status"] in {"review", "complete", "failed"}:
                 return
             await asyncio.sleep(0.5)
