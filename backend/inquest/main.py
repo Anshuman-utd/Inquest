@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
+from inquest.auth.api import auth_router, authenticate
 from inquest.db.tenant import TenantDatabase
 from inquest.evaluation.agent_api import evaluation_router
 from inquest.investigation.api import investigation_router, supervise
@@ -83,7 +84,9 @@ ip_key = (
     if settings.ip_hash_secret
     else token_bytes(32)
 )
-app.include_router(investigation_router(investigations, ip_key))
+actor = authenticate(investigations.auth, settings.web_origin)
+app.include_router(auth_router(engine, settings, actor, ip_key))
+app.include_router(investigation_router(investigations, ip_key, actor))
 app.include_router(scoring_router(engine, scorer))
 app.include_router(evaluation_router(settings.evaluation_reports_directory))
 

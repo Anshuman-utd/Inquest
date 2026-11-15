@@ -1,6 +1,4 @@
 import asyncio
-import hashlib
-import hmac
 import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -8,11 +6,11 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+from inquest.auth.api import Actor, client_ip_hash
 from inquest.db.tenant import WorkspaceAccessDenied
 from inquest.investigation.contracts import ToolScope
 from inquest.investigation.reports import Report
@@ -22,7 +20,6 @@ from inquest.investigation.service import Investigations
 
 log = logging.getLogger(__name__)
 Key = Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=128)]
-bearer = HTTPBearer(auto_error=False)
 
 
 class Started(BaseModel):
@@ -76,18 +73,8 @@ def guarded[T](action: Callable[[], T]) -> T:
         raise HTTPException(status_code=429, detail="Rate limit reached") from exc
 
 
-def investigation_router(service: Investigations, ip_key: bytes) -> APIRouter:
+def investigation_router(service: Investigations, ip_key: bytes, actor: Actor) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["investigations"])
-
-    def actor(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
-    ) -> tuple[UUID, UUID]:
-        if credentials is None or not 32 <= len(credentials.credentials) <= 256:
-            raise HTTPException(status_code=401, detail="Analyst session required")
-        identity = service.auth(hashlib.sha256(credentials.credentials.encode()).hexdigest())
-        if identity is None:
-            raise HTTPException(status_code=401, detail="Analyst session required")
-        return identity
 
     def scope(identity: tuple[UUID, UUID], investigation_id: UUID) -> ToolScope:
         return ToolScope(
@@ -101,8 +88,7 @@ def investigation_router(service: Investigations, ip_key: bytes) -> APIRouter:
         key: Key,
         identity: Annotated[tuple[UUID, UUID], Depends(actor)],
     ) -> Started:
-        client = request.client.host if request.client else "unknown"
-        ip_hash = hmac.digest(ip_key, client.encode(), "sha256").hex()
+        ip_hash = client_ip_hash(request, ip_key)
         return Started(
             investigation_id=guarded(
                 lambda: service.start(scope(identity, uuid4()), case_id, key, ip_hash)

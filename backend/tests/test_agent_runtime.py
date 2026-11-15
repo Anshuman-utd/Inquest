@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
+from inquest.auth.api import authenticate
 from inquest.db.tenant import TenantDatabase
 from inquest.investigation.api import investigation_router
 from inquest.investigation.contracts import ToolScope
@@ -113,7 +114,11 @@ def service(gateway: ModelGateway | None = None) -> Investigations:
 def test_api_replay_checkpoint_and_resume_through_fresh_worker(demo: DemoSession) -> None:
     runtime = service()
     app = FastAPI()
-    app.include_router(investigation_router(runtime, b"test-secret"))
+    app.include_router(
+        investigation_router(
+            runtime, b"test-secret", authenticate(runtime.auth, Settings().web_origin)
+        )
+    )
     with TestClient(app) as client:
         path = f"/api/v1/cases/{demo.case_id}/investigations"
         assert client.post(path, headers={"Idempotency-Key": "start-test"}).status_code == 401

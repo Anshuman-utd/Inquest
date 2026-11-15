@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,3 +29,30 @@ class Settings(BaseSettings):
         "postgresql+psycopg://inquest_eval:local_eval@localhost:5434/inquest"
     )
     evaluation_reports_directory: Path = Path("fixtures/evaluations")
+
+    web_origin: str = "http://localhost:5173"
+    github_client_id: str = ""
+    github_client_secret: SecretStr = SecretStr("")
+    google_client_id: str = ""
+    google_client_secret: SecretStr = SecretStr("")
+    signup_per_ip_minute: int = Field(default=8, ge=1)
+
+    @field_validator("web_origin")
+    @classmethod
+    def valid_origin(cls, value: str) -> str:
+        url = urlsplit(value)
+        if (
+            not url.hostname
+            or url.username
+            or url.password
+            or url.path
+            or url.query
+            or url.fragment
+            or value != f"{url.scheme}://{url.netloc}"
+            or (
+                url.scheme != "https"
+                and not (url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "::1"})
+            )
+        ):
+            raise ValueError("Use an HTTPS origin or a loopback HTTP origin without a path")
+        return value

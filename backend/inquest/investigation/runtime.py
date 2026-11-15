@@ -71,7 +71,13 @@ def event(
     )
 
 
-def consume_ip(connection: Connection, ip_hash: str, limit: int) -> None:
+def consume_ip(
+    connection: Connection,
+    ip_hash: str,
+    limit: int,
+    *,
+    action: Literal["signup", "investigate"] = "investigate",
+) -> None:
     connection.execute(
         text("""
         DELETE FROM operations.ip_rate_limits WHERE window_started_at < now() - interval '1 day'
@@ -80,13 +86,13 @@ def consume_ip(connection: Connection, ip_hash: str, limit: int) -> None:
     allowed = connection.execute(
         text("""
             INSERT INTO operations.ip_rate_limits (action, ip_hash, window_started_at, attempts)
-            VALUES ('investigate', :ip, date_trunc('minute', now()), 1)
+            VALUES (:action, :ip, date_trunc('minute', now()), 1)
             ON CONFLICT (action, ip_hash, window_started_at) DO UPDATE SET
                 attempts = operations.ip_rate_limits.attempts + 1
                 WHERE operations.ip_rate_limits.attempts < :limit
             RETURNING attempts
         """),
-        {"ip": ip_hash, "limit": limit},
+        {"ip": ip_hash, "limit": limit, "action": action},
     ).scalar_one_or_none()
     if allowed is None:
         raise RateLimited
