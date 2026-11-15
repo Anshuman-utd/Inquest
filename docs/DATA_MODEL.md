@@ -28,7 +28,7 @@ Assign hidden episode IDs, labels, and scenario tags during generation. Vary eve
 
 | Table | Core fields and integrity |
 | --- | --- |
-| `workspaces`, `analysts`, `workspace_memberships` | Workspace identity, analyst identity and role. Use the stable GitHub account ID as the OAuth subject. Actor identities drive the audit trail. Workspace ownership is enforced on case and simulator routes. |
+| `workspaces`, `analysts`, `workspace_memberships` | Workspace identity, analyst identity and role. Phase 6 resolves analyst identities by provider and stable subject, using the GitHub account ID or the Google OpenID Connect subject. Actor identities drive the audit trail. Workspace ownership is enforced on case and simulator routes. |
 | `datasets`, `replay_runs` | Shared, read-only fixture version, seed and manifest hash. Simulator runs record dataset, state, cursor and speed. Shared replay progress and scores are service-managed. A replay creates a distinct run and retains prior cases. |
 | `customers`, `merchants`, `devices` | Dataset-scoped synthetic IDs, display identifiers and allowed entity attributes. Device identities can recur across customers. Merchant risk uses an observable profile valid at the event cutoff. |
 | `transactions` | Dataset and source sequence, customer, counterparty, device, synthetic payment instrument ID, event timestamp, amount in integer minor units, ISO currency, channel, authorization outcome if observed, and approximate location plus source and accuracy. Composite foreign keys prevent cross-fixture joins. Counterparties use the merchant table, with an explicit type for synthetic transfer recipients. |

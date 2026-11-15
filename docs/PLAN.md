@@ -63,7 +63,7 @@ Run a 512 MB cgroup smoke test before committing to the serving footprint. Measu
 
 Version the contract under `/api/v1`. Export and validate the OpenAPI schema as routes land, and pin the stream event schemas alongside it before frontend work. The hosted demo allows public signup and provisions an isolated workspace for each analyst. Use the shared read-only synthetic INR fixture and Indian cities. Keep currency, city data, and amount distributions configurable. Cases, investigations, decisions and notes are workspace-owned. Investigation artifacts inherit the same ownership. A single tenant-scoped data layer binds the authenticated workspace on every request and background job, with Postgres row-level policies and composite foreign keys. Phase 1 tests exercise cross-workspace reads, writes and references.
 
-Use GitHub OAuth with state and S256 PKCE. GitHub is familiar to the portfolio audience and avoids operating email verification or storing passwords. Resolve the account using its stable GitHub ID and discard the OAuth access token after identity lookup. Keep application credentials out of URLs and authenticate fetch streams against the configured frontend origin. OAuth endpoints land with the hosted access work. [GitHub OAuth web flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+Phase 6 includes sign-up and sign-in pages with GitHub OAuth and Google OpenID Connect. Use state and S256 PKCE for authorization code flows. Resolve GitHub identities by stable account ID and Google identities by validated issuer and subject, including nonce validation. First sign-in provisions the analyst and workspace together. Later sign-ins with the same identity return to that workspace. Keep identities keyed by provider and subject, with email used only as profile data if collected. Both providers issue the same short-lived Inquest session after identity verification. Keep application credentials out of URLs and authenticate fetch streams against the configured frontend origin. [GitHub OAuth web flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps) · [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
 
 Rate-limit signup and investigation starts per IP using only trusted ingress IP metadata. Enforce a per-workspace daily live-investigation cap and a global daily LLM token budget with an operator kill switch. Atomically reserve budget before outbound calls, including retries, and enforce idempotency before consuming a workspace slot. Serve versioned pre-recorded investigations in replay mode when quota is exhausted. Keep the provider response cache on disk. Clearly label replay, and show “Synthetic data only. Don’t enter real personal data.” at signup and beside notes. Keep notes out of provider prompts.
 
@@ -91,7 +91,7 @@ Push each tested slice directly to `origin/main` in order. Stop at the end of ea
 | 3 · Agent tools and RAG | Read-only investigation tools, versioned policy retrieval | Stable evidence IDs, negative permissions and retrieval fixtures |
 | 4 · Agent graph | Provider/cache and budgets, report verification and approval, reconnectable SSE | Interrupt survives restart, invalid evidence fails safely, authorized resume is idempotent |
 | 5 · Evaluation | Dataset and harness, ablations and results, corrections with new run IDs | Paired held-out metrics and documented failure cases |
-| 6 · Frontend | App shell and queue, case and SSE, explorer and simulator, evaluation and accessibility | End-to-end against the pinned contract on desktop and tablet |
+| 6 · Frontend | API contract, GitHub and Google signup and sign-in, app shell and queue, case and SSE, explorer and simulator, evaluation and accessibility | Verify account creation and return sign-ins for both providers, plus the analyst workflow against the pinned contract on desktop and tablet |
 | 7 · Hardening and deployment | CI and hardening, free-tier deployment checks, README demo and interview notes | Verified hosted flow, measured memory and reproducible local demo |
 
 ## Main risks
@@ -107,7 +107,7 @@ Push each tested slice directly to `origin/main` in order. Stop at the end of ea
 
 ## Phase 0 decisions for Phase 1
 
-- Public GitHub OAuth signup provisions an isolated analyst workspace over one shared synthetic fixture.
+- Public signup provisions an isolated analyst workspace over one shared synthetic fixture. The Phase 6 scope includes GitHub and Google sign-in.
 - The fixture uses INR and Indian cities by default, with configurable amounts and UPI collect-request scams, SIM-swap takeover, and mule-account scenarios.
 - Groq is primary. Gemini stays disabled by default until its quota is confirmed.
 - The approved slate-and-teal console uses separate colorblind-safe semantic status treatments with contrast checks in both themes.

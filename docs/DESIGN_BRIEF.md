@@ -41,6 +41,7 @@ Show the risk score as a number with an optional neutral bar. The proposed statu
 
 | Screen | Proposed composition |
 | --- | --- |
+| Sign up and sign in | Show “Continue with GitHub” and “Continue with Google” on both pages. Explain that first sign-in creates an analyst workspace. Show the synthetic-data notice at signup and a retry action if authentication fails. |
 | Case queue | Search and filters above a sortable table for status, risk, amount, merchant, channel and time. Keep an explicit case link in each row. Put sort state and active filters in the URL. |
 | Case detail | Show the transaction summary and model score with signed horizontal feature bars. Put the live timeline beside the report at desktop widths and stack them on tablet. Expand timeline entries to inspect validated inputs and observations. Selecting a report citation opens and focuses the matching observation. Place approve, override and escalate beside the recommendation with a labeled notes field and the notice “Synthetic data only. Don’t enter real personal data.” Repeat the notice at signup. Show the recorded action and actor once the case changes. |
 | Transaction explorer | Search by synthetic customer ID or alias. Show a chronological timeline with amount, location, device, channel and flagged attempts. Provide a compact distance and elapsed-time comparison with source and accuracy. |

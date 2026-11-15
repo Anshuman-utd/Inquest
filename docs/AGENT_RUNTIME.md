@@ -15,7 +15,7 @@ docker compose up --build -d --wait
 PYTHONPATH=backend uv run python -m inquest.investigation.demo
 ```
 
-The second command provisions a local workspace, one case from the shared fixture, and a one-hour bearer session. Treat the output token as a credential. GitHub OAuth will issue hosted sessions in the hosted access work. The local provisioner uses the migration role and is intended for a development database.
+The second command provisions a local workspace, one case from the shared fixture, and a one-hour bearer session. Treat the output token as a credential. Phase 6 adds GitHub and Google sign-in backed by Inquest sessions. The local provisioner uses the migration role and is intended for a development database.
 
 | Request | What to supply |
 | --- | --- |
