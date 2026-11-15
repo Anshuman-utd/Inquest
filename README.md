@@ -4,7 +4,7 @@ Inquest is a portfolio project for investigating synthetic card and UPI-style pa
 
 **Synthetic data only. Don’t enter real personal data.**
 
-## Phase 4 status
+## Phase 5 status
 
 The API scores shared synthetic transactions with a small LightGBM model and returns signed TreeSHAP contributions. Postgres holds the shared fixture, evaluation truth, and workspace-scoped case records. The [investigation tool layer](docs/INVESTIGATION_TOOLS.md) gathers scoped evidence and retrieves versioned policy excerpts. The [investigation runtime](docs/AGENT_RUNTIME.md) adds LangGraph checkpoints, grounded reports, analyst approval, budgets, and reconnectable SSE. Hosted GitHub OAuth signup and its rate limits are planned for the hosted access work.
 
@@ -28,6 +28,10 @@ curl -fsS http://localhost:8000/api/v1/datasets/v1-6ad7511a3aebaf4750c16dcd506c9
 The score preview reads the shared fixture as of the transaction’s timestamp and source sequence. The response contains the estimated fraud probability, fixed threshold, alert flag, and five signed contributions in raw-margin units. The preview performs no writes. Automated case creation will use the replay and workspace flow.
 
 The [scorer results and threshold sweep](docs/SCORER_THRESHOLD_SWEEP.md) give the chronological validation and held-out metrics, the test misses, and the training command.
+
+## Agent evaluation
+
+Both evaluated full-agent versions escalated all 17 sampled alerts per cohort, preserving flagged fraud for review and clearing zero legitimate alerts. The versioned aggregates are served at `GET /api/v1/evaluations`. [Measured results](docs/AGENT_EVALUATION_RESULTS.md) · [Runbook](docs/AGENT_EVALUATION_RUNBOOK.md)
 
 ## Synthetic fixture
 

@@ -1,0 +1,868 @@
+{
+  "schema_version": 1,
+  "run_ids": {
+    "ml_only": "1afc271f-eba8-5bf8-a418-9c4cb273b9a3",
+    "full": "f6693155-dd15-54fa-af5a-c1ac5c5a3444",
+    "no_tools": "7df6a43d-d7a0-5f43-9f98-0e137446b022",
+    "no_policy": "2c6388ae-b459-5073-bcb7-318c94b392d0",
+    "no_self_check": "4e933efb-db80-5292-b52f-d4131c3406d2"
+  },
+  "cohort": {
+    "name": "confirmation",
+    "config": {
+      "seed": 2106,
+      "start": "2025-11-01T00:00:00Z",
+      "days": 150,
+      "currency": "INR",
+      "timezone": "Asia/Kolkata",
+      "customer_count": 650,
+      "merchant_count": 160,
+      "attempts_per_customer_week": 4.2,
+      "fraud_rate": 0.005,
+      "lookalikes_per_fraud_episode": 2,
+      "cities": [
+        {
+          "id": "mumbai",
+          "name": "Mumbai",
+          "latitude": 19.076,
+          "longitude": 72.8777
+        },
+        {
+          "id": "delhi",
+          "name": "Delhi",
+          "latitude": 28.6139,
+          "longitude": 77.209
+        },
+        {
+          "id": "bengaluru",
+          "name": "Bengaluru",
+          "latitude": 12.9716,
+          "longitude": 77.5946
+        },
+        {
+          "id": "pune",
+          "name": "Pune",
+          "latitude": 18.5204,
+          "longitude": 73.8567
+        },
+        {
+          "id": "hyderabad",
+          "name": "Hyderabad",
+          "latitude": 17.385,
+          "longitude": 78.4867
+        },
+        {
+          "id": "chennai",
+          "name": "Chennai",
+          "latitude": 13.0827,
+          "longitude": 80.2707
+        },
+        {
+          "id": "kolkata",
+          "name": "Kolkata",
+          "latitude": 22.5726,
+          "longitude": 88.3639
+        }
+      ],
+      "amounts": [
+        {
+          "category": "groceries",
+          "median_minor": 109250,
+          "log_sigma": 0.65,
+          "weight": 26.0
+        },
+        {
+          "category": "dining",
+          "median_minor": 69000,
+          "log_sigma": 0.7,
+          "weight": 19.0
+        },
+        {
+          "category": "transport",
+          "median_minor": 31050,
+          "log_sigma": 0.8,
+          "weight": 18.0
+        },
+        {
+          "category": "retail",
+          "median_minor": 299000,
+          "log_sigma": 0.9,
+          "weight": 17.0
+        },
+        {
+          "category": "utilities",
+          "median_minor": 184000,
+          "log_sigma": 0.6,
+          "weight": 9.0
+        },
+        {
+          "category": "transfer",
+          "median_minor": 172500,
+          "log_sigma": 1.0,
+          "weight": 9.0
+        },
+        {
+          "category": "cash_like",
+          "median_minor": 287500,
+          "log_sigma": 0.75,
+          "weight": 2.0
+        }
+      ]
+    },
+    "dataset_id": "v1-19767bcdc8055661bf77954dd97ecd8d7fbbd92fdaab7ce2c7fcb376c918863e",
+    "model_version": "lgbm-5e143a31879bae22",
+    "model_sha256": "9600c847125f85799002aab98b4a977e0f73228ebe136ae67d54b9a5c4ceb04b",
+    "threshold": 0.008786782651795052,
+    "sampling_seed": 715,
+    "sample_sha256": "9a148d7ff907d170747ac4d018b7182561c7b981a86104cd0c7e53681716b482",
+    "attempts": 47384,
+    "fraud": 203,
+    "alerted": 1055,
+    "alerted_fraud": 187,
+    "fraud_by_scenario": {
+      "merchant_collusion": 27,
+      "mule_cash_out": 35,
+      "velocity_burst": 28,
+      "account_takeover": 23,
+      "impossible_travel": 7,
+      "card_testing": 37,
+      "new_device_high_value": 9,
+      "upi_sim_swap": 18,
+      "upi_collect_scam": 19
+    },
+    "alerted_fraud_by_scenario": {
+      "merchant_collusion": 27,
+      "mule_cash_out": 29,
+      "velocity_burst": 22,
+      "account_takeover": 23,
+      "impossible_travel": 7,
+      "card_testing": 37,
+      "new_device_high_value": 9,
+      "upi_sim_swap": 18,
+      "upi_collect_scam": 15
+    }
+  },
+  "arms": {
+    "ml_only": {
+      "sample_size": 17,
+      "sample_fraud": 9,
+      "sample_actions": {
+        "escalate": 17
+      },
+      "sample_false_releases": 0,
+      "sample_true_releases": 0,
+      "sample_fraud_blocked": 0,
+      "sample_legit_blocked": 0,
+      "covers_all_alert_strata": true,
+      "weighted_fraud": 187.0,
+      "weighted_legit": 868.0,
+      "weighted_legit_released": 0,
+      "weighted_legit_blocked": 0,
+      "weighted_legit_escalated": 868.0,
+      "weighted_fraud_escalated": 187.0,
+      "weighted_fraud_failure": 0,
+      "weighted_legit_failure": 0,
+      "legit_alerts_cleared": 0.0,
+      "alert_fraud_retained": 1.0,
+      "end_to_end_fraud_retained": 0.9211822660098522,
+      "alert_triage_accuracy": 0.17725118483412322,
+      "end_to_end_triage_accuracy": 0.981343913557319,
+      "resolved_accuracy": null,
+      "resolution_coverage": 0.0,
+      "correct_resolved_share": 0.0,
+      "grounded_sample": 0,
+      "grounding_denominator": 0,
+      "scenarios": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/scenario": {
+          "escalate": 4
+        }
+      },
+      "per_scenario": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/mule_cash_out": {
+          "escalate": 1
+        },
+        "legit/new_device_high_value": {
+          "escalate": 2
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/velocity_burst": {
+          "escalate": 1
+        }
+      },
+      "failure_codes": {},
+      "tool_calls": 0,
+      "mean_tool_calls": 0.0,
+      "policy_calls": 0,
+      "provider_requests": 0,
+      "provider_retries": 0,
+      "cache_hits": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "accounted_tokens": 0,
+      "equivalent_list_cost_usd": 0.0,
+      "actual_cost_usd": null,
+      "p50_seconds": null,
+      "p95_seconds": null,
+      "live_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      },
+      "cache_only_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      }
+    },
+    "full": {
+      "sample_size": 17,
+      "sample_fraud": 9,
+      "sample_actions": {
+        "escalate": 17
+      },
+      "sample_false_releases": 0,
+      "sample_true_releases": 0,
+      "sample_fraud_blocked": 0,
+      "sample_legit_blocked": 0,
+      "covers_all_alert_strata": true,
+      "weighted_fraud": 187.0,
+      "weighted_legit": 868.0,
+      "weighted_legit_released": 0,
+      "weighted_legit_blocked": 0,
+      "weighted_legit_escalated": 868.0,
+      "weighted_fraud_escalated": 187.0,
+      "weighted_fraud_failure": 9.0,
+      "weighted_legit_failure": 0,
+      "legit_alerts_cleared": 0.0,
+      "alert_fraud_retained": 1.0,
+      "end_to_end_fraud_retained": 0.9211822660098522,
+      "alert_triage_accuracy": 0.17725118483412322,
+      "end_to_end_triage_accuracy": 0.981343913557319,
+      "resolved_accuracy": null,
+      "resolution_coverage": 0.0,
+      "correct_resolved_share": 0.0,
+      "grounded_sample": 16,
+      "grounding_denominator": 17,
+      "scenarios": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1,
+          "failures": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/scenario": {
+          "escalate": 4
+        }
+      },
+      "per_scenario": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1,
+          "failures": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/mule_cash_out": {
+          "escalate": 1
+        },
+        "legit/new_device_high_value": {
+          "escalate": 2
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/velocity_burst": {
+          "escalate": 1
+        }
+      },
+      "failure_codes": {
+        "investigation_budget_exhausted": 1
+      },
+      "tool_calls": 102,
+      "mean_tool_calls": 6.0,
+      "policy_calls": 17,
+      "provider_requests": 29,
+      "provider_retries": 1,
+      "cache_hits": 0,
+      "input_tokens": 18726,
+      "output_tokens": 5856,
+      "accounted_tokens": 27569,
+      "equivalent_list_cost_usd": 0.00316125,
+      "actual_cost_usd": null,
+      "p50_seconds": 1.6045518330065534,
+      "p95_seconds": 3.4907332499860786,
+      "live_latency": {
+        "cases": 17,
+        "p50_seconds": 1.6045518330065534,
+        "p95_seconds": 3.4907332499860786
+      },
+      "cache_only_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      }
+    },
+    "no_tools": {
+      "sample_size": 17,
+      "sample_fraud": 9,
+      "sample_actions": {
+        "escalate": 17
+      },
+      "sample_false_releases": 0,
+      "sample_true_releases": 0,
+      "sample_fraud_blocked": 0,
+      "sample_legit_blocked": 0,
+      "covers_all_alert_strata": true,
+      "weighted_fraud": 187.0,
+      "weighted_legit": 868.0,
+      "weighted_legit_released": 0,
+      "weighted_legit_blocked": 0,
+      "weighted_legit_escalated": 868.0,
+      "weighted_fraud_escalated": 187.0,
+      "weighted_fraud_failure": 0,
+      "weighted_legit_failure": 0,
+      "legit_alerts_cleared": 0.0,
+      "alert_fraud_retained": 1.0,
+      "end_to_end_fraud_retained": 0.9211822660098522,
+      "alert_triage_accuracy": 0.17725118483412322,
+      "end_to_end_triage_accuracy": 0.981343913557319,
+      "resolved_accuracy": null,
+      "resolution_coverage": 0.0,
+      "correct_resolved_share": 0.0,
+      "grounded_sample": 17,
+      "grounding_denominator": 17,
+      "scenarios": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/scenario": {
+          "escalate": 4
+        }
+      },
+      "per_scenario": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/mule_cash_out": {
+          "escalate": 1
+        },
+        "legit/new_device_high_value": {
+          "escalate": 2
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/velocity_burst": {
+          "escalate": 1
+        }
+      },
+      "failure_codes": {},
+      "tool_calls": 0,
+      "mean_tool_calls": 0.0,
+      "policy_calls": 0,
+      "provider_requests": 18,
+      "provider_retries": 0,
+      "cache_hits": 0,
+      "input_tokens": 5936,
+      "output_tokens": 4139,
+      "accounted_tokens": 10075,
+      "equivalent_list_cost_usd": 0.0016869,
+      "actual_cost_usd": null,
+      "p50_seconds": 0.7816432089894079,
+      "p95_seconds": 6.6229927919921465,
+      "live_latency": {
+        "cases": 17,
+        "p50_seconds": 0.7816432089894079,
+        "p95_seconds": 6.6229927919921465
+      },
+      "cache_only_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      }
+    },
+    "no_policy": {
+      "sample_size": 17,
+      "sample_fraud": 9,
+      "sample_actions": {
+        "escalate": 17
+      },
+      "sample_false_releases": 0,
+      "sample_true_releases": 0,
+      "sample_fraud_blocked": 0,
+      "sample_legit_blocked": 0,
+      "covers_all_alert_strata": true,
+      "weighted_fraud": 187.0,
+      "weighted_legit": 868.0,
+      "weighted_legit_released": 0,
+      "weighted_legit_blocked": 0,
+      "weighted_legit_escalated": 868.0,
+      "weighted_fraud_escalated": 187.0,
+      "weighted_fraud_failure": 0,
+      "weighted_legit_failure": 0,
+      "legit_alerts_cleared": 0.0,
+      "alert_fraud_retained": 1.0,
+      "end_to_end_fraud_retained": 0.9211822660098522,
+      "alert_triage_accuracy": 0.17725118483412322,
+      "end_to_end_triage_accuracy": 0.981343913557319,
+      "resolved_accuracy": null,
+      "resolution_coverage": 0.0,
+      "correct_resolved_share": 0.0,
+      "grounded_sample": 17,
+      "grounding_denominator": 17,
+      "scenarios": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/scenario": {
+          "escalate": 4
+        }
+      },
+      "per_scenario": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1
+        },
+        "legit/mule_cash_out": {
+          "escalate": 1
+        },
+        "legit/new_device_high_value": {
+          "escalate": 2
+        },
+        "legit/routine": {
+          "escalate": 4
+        },
+        "legit/velocity_burst": {
+          "escalate": 1
+        }
+      },
+      "failure_codes": {},
+      "tool_calls": 85,
+      "mean_tool_calls": 5.0,
+      "policy_calls": 0,
+      "provider_requests": 31,
+      "provider_retries": 0,
+      "cache_hits": 0,
+      "input_tokens": 18058,
+      "output_tokens": 6641,
+      "accounted_tokens": 24699,
+      "equivalent_list_cost_usd": 0.0033466499999999996,
+      "actual_cost_usd": null,
+      "p50_seconds": 1.453346916998271,
+      "p95_seconds": 2.5761019170167856,
+      "live_latency": {
+        "cases": 17,
+        "p50_seconds": 1.453346916998271,
+        "p95_seconds": 2.5761019170167856
+      },
+      "cache_only_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      }
+    },
+    "no_self_check": {
+      "sample_size": 17,
+      "sample_fraud": 9,
+      "sample_actions": {
+        "escalate": 17
+      },
+      "sample_false_releases": 0,
+      "sample_true_releases": 0,
+      "sample_fraud_blocked": 0,
+      "sample_legit_blocked": 0,
+      "covers_all_alert_strata": true,
+      "weighted_fraud": 187.0,
+      "weighted_legit": 868.0,
+      "weighted_legit_released": 0,
+      "weighted_legit_blocked": 0,
+      "weighted_legit_escalated": 868.0,
+      "weighted_fraud_escalated": 187.0,
+      "weighted_fraud_failure": 0,
+      "weighted_legit_failure": 0,
+      "legit_alerts_cleared": 0.0,
+      "alert_fraud_retained": 1.0,
+      "end_to_end_fraud_retained": 0.9211822660098522,
+      "alert_triage_accuracy": 0.17725118483412322,
+      "end_to_end_triage_accuracy": 0.981343913557319,
+      "resolved_accuracy": null,
+      "resolution_coverage": 0.0,
+      "correct_resolved_share": 0.0,
+      "grounded_sample": 5,
+      "grounding_denominator": 17,
+      "scenarios": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "legit/routine": {
+          "escalate": 4,
+          "unsupported": 3
+        },
+        "legit/scenario": {
+          "escalate": 4,
+          "unsupported": 2
+        }
+      },
+      "per_scenario": {
+        "fraud/account_takeover": {
+          "escalate": 1
+        },
+        "fraud/card_testing": {
+          "escalate": 1
+        },
+        "fraud/impossible_travel": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/merchant_collusion": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/mule_cash_out": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/new_device_high_value": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/upi_collect_scam": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/upi_sim_swap": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "fraud/velocity_burst": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "legit/mule_cash_out": {
+          "escalate": 1,
+          "unsupported": 1
+        },
+        "legit/new_device_high_value": {
+          "escalate": 2,
+          "unsupported": 1
+        },
+        "legit/routine": {
+          "escalate": 4,
+          "unsupported": 3
+        },
+        "legit/velocity_burst": {
+          "escalate": 1
+        }
+      },
+      "failure_codes": {},
+      "tool_calls": 102,
+      "mean_tool_calls": 6.0,
+      "policy_calls": 17,
+      "provider_requests": 0,
+      "provider_retries": 0,
+      "cache_hits": 17,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "accounted_tokens": 0,
+      "equivalent_list_cost_usd": 0.0,
+      "actual_cost_usd": null,
+      "p50_seconds": 0.06907549995230511,
+      "p95_seconds": 0.14235141599783674,
+      "live_latency": {
+        "cases": 0,
+        "p50_seconds": null,
+        "p95_seconds": null
+      },
+      "cache_only_latency": {
+        "cases": 17,
+        "p50_seconds": 0.06907549995230511,
+        "p95_seconds": 0.14235141599783674
+      }
+    }
+  },
+  "revision": "focused",
+  "provenance": {
+    "ml_only": {
+      "git": "4a04d00a008e9c5aeb5a4865f2aa969db2d96b1c",
+      "graph_sha256": "331898816c9f14ff3bd2493abb0619c85133fc4c8e65a862261908f47282fcfb",
+      "policy_sha256": "4f4cb185af4dc0f5fe8912f09c378dbb7c4e5f635f4ca78a019ff9642f96a7a9",
+      "provider": "groq:openai/gpt-oss-20b",
+      "cache_only": false,
+      "revision": "focused",
+      "global_daily_tokens": 190000
+    },
+    "full": {
+      "git": "4a04d00a008e9c5aeb5a4865f2aa969db2d96b1c",
+      "graph_sha256": "331898816c9f14ff3bd2493abb0619c85133fc4c8e65a862261908f47282fcfb",
+      "policy_sha256": "4f4cb185af4dc0f5fe8912f09c378dbb7c4e5f635f4ca78a019ff9642f96a7a9",
+      "provider": "groq:openai/gpt-oss-20b",
+      "cache_only": false,
+      "revision": "focused",
+      "global_daily_tokens": 190000
+    },
+    "no_tools": {
+      "git": "4a04d00a008e9c5aeb5a4865f2aa969db2d96b1c",
+      "graph_sha256": "331898816c9f14ff3bd2493abb0619c85133fc4c8e65a862261908f47282fcfb",
+      "policy_sha256": "4f4cb185af4dc0f5fe8912f09c378dbb7c4e5f635f4ca78a019ff9642f96a7a9",
+      "provider": "groq:openai/gpt-oss-20b",
+      "cache_only": false,
+      "revision": "focused",
+      "global_daily_tokens": 190000
+    },
+    "no_policy": {
+      "git": "4a04d00a008e9c5aeb5a4865f2aa969db2d96b1c",
+      "graph_sha256": "331898816c9f14ff3bd2493abb0619c85133fc4c8e65a862261908f47282fcfb",
+      "policy_sha256": "4f4cb185af4dc0f5fe8912f09c378dbb7c4e5f635f4ca78a019ff9642f96a7a9",
+      "provider": "groq:openai/gpt-oss-20b",
+      "cache_only": false,
+      "revision": "focused",
+      "global_daily_tokens": 190000
+    },
+    "no_self_check": {
+      "git": "4a04d00a008e9c5aeb5a4865f2aa969db2d96b1c",
+      "graph_sha256": "331898816c9f14ff3bd2493abb0619c85133fc4c8e65a862261908f47282fcfb",
+      "policy_sha256": "4f4cb185af4dc0f5fe8912f09c378dbb7c4e5f635f4ca78a019ff9642f96a7a9",
+      "provider": "groq:openai/gpt-oss-20b",
+      "cache_only": false,
+      "revision": "focused",
+      "global_daily_tokens": 190000
+    }
+  }
+}
