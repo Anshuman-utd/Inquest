@@ -577,3 +577,17 @@ span.filter-chip { padding: 6px 8px; font-size: 13px; }
   .evaluation-metrics > div:nth-child(n+3) { border-top: 1px solid var(--border); }
   .evaluation-metrics > div:nth-child(3) { border-left: 0; }
 }
+
+.simulator-panel { width: min(330px, calc(100vw - 24px)); padding: 14px; }
+.simulator-panel h2 { margin-bottom: 0; }
+.simulator-panel .sim-progress { padding: 10px 0; margin-top: 8px; border-bottom: 1px solid var(--border); }
+.simulator-panel .progress-label { font-size: 13px; }
+.simulator-panel progress { display: block; margin-top: 5px; background: var(--soft); color: var(--chart); accent-color: var(--chart); border-radius: var(--radius-control); }
+.simulator-panel progress::-webkit-progress-bar { background: var(--soft); border-radius: var(--radius-control); }
+.simulator-panel progress::-webkit-progress-value { background: var(--chart); border-radius: var(--radius-control); }
+.simulator-panel progress::-moz-progress-bar { background: var(--chart); border-radius: var(--radius-control); }
+.simulator-actions { justify-content: space-between; }
+.simulator[open] .sim-chev { transform: rotate(180deg); }
+.sim-chev { transition: transform 160ms ease; }
+.confirm-dialog .state { margin-bottom: 12px; border-radius: var(--radius-control); }
+@media (max-width: 640px) { .simulator-panel { width: auto; } }

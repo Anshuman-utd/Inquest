@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pause, Play, Radio, RotateCcw } from 'lucide-react'
+import { ChevronDown, Pause, Play, Radio, RotateCcw } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { ApiError, post, request, type Schema } from './api'
-import { Failure, human, number, short } from './ui'
+import { Button, ConfirmDialog, Failure, human, number, short, Skeleton } from './ui'
 
 export function useSimulator() {
   return useQuery({
@@ -28,7 +28,8 @@ export function Simulator() {
     mutationFn: (command: Schema['ReplayCommand']['command']) => post<Schema['ReplayStatus']>(
       '/simulator/commands', { command, expected_replay_id: state?.replay_id ?? null },
     ),
-    onSuccess: next => {
+    onSuccess: (next, command) => {
+      if (command === 'replay') dialog.current?.close()
       client.setQueryData(['simulator'], next)
       void client.invalidateQueries({ queryKey: ['cases'] })
     },
@@ -47,6 +48,16 @@ export function Simulator() {
     return () => document.removeEventListener('pointerdown', dismiss)
   }, [])
 
+  const label = state?.state || 'idle'
+  const busy = mutate.isPending
+  const mainCommand = label === 'running' ? 'pause' : 'start'
+  const replayError = mutate.variables === 'replay' ? mutate.error : null
+
+  function cancel() {
+    dialog.current?.close()
+    mutate.reset()
+  }
+
   return <details className="simulator" ref={menu} onKeyDown={event => {
     if (event.key === 'Escape' && !dialog.current?.open) {
       menu.current?.removeAttribute('open')
@@ -54,40 +65,39 @@ export function Simulator() {
     }
   }}>
     <summary id="simulator-trigger" className="button" title="Simulator controls">
-      <Radio size={16} aria-hidden />
-      <span>Simulator</span><span className="sim-summary">{state ? human(state.state || 'idle') : '…'}</span>
+      <Radio aria-hidden />
+      <span>Simulator</span><span className="sim-summary">{state ? human(label) : '…'}</span>
+      <ChevronDown className="sim-chev" aria-hidden />
     </summary>
     <section className="simulator-panel" aria-label="Simulator controls">
-      <h2>Transaction replay</h2>
+      <div className="section-heading">
+        <h2>Transaction replay</h2>
+        {state && <span className="tag">{human(label)}</span>}
+      </div>
+      {query.isPending && <Skeleton text="Loading simulator…" />}
       {query.error && <Failure error={query.error} retry={() => void query.refetch()} />}
       {state && <>
-        <div className="progress-label"><span>{human(state.state || 'idle')}</span>
-          <span className="mono">{number.format(state.cursor || 0)} / {number.format(state.total)}</span>
+        <div className="sim-progress">
+          <div className="progress-label"><span>Transactions replayed</span>
+            <span className="mono">{number.format(state.cursor || 0)} / {number.format(state.total)}</span>
+          </div>
+          <progress value={state.cursor || 0} max={state.total} aria-label="Transactions replayed" />
+          {state.replay_id && <p className="muted">Active replay <span className="mono" title={state.replay_id}>{short(state.replay_id)}</span></p>}
         </div>
-        <progress value={state.cursor || 0} max={state.total} aria-label="Transactions replayed" />
-        {state.replay_id && <p className="muted">Active replay <span className="mono" title={state.replay_id}>{short(state.replay_id)}</span></p>}
-        <div className="button-row">
-          {state.state === 'running'
-            ? <button className="button" type="button" disabled={mutate.isPending} onClick={() => mutate.mutate('pause')}>
-              <Pause size={15} aria-hidden />Pause
-            </button>
-            : <button className="button primary" type="button" disabled={mutate.isPending || state.state === 'complete'} onClick={() => mutate.mutate('start')}>
-              <Play size={15} aria-hidden />{state.state === 'paused' ? 'Resume' : 'Start'}
-            </button>}
-          <button className="button" type="button" disabled={mutate.isPending || !state.replay_id} onClick={() => dialog.current?.showModal()}>
-            <RotateCcw size={15} aria-hidden />Replay
-          </button>
+        <div className="button-row simulator-actions">
+          <Button icon={<RotateCcw />} disabled={busy || !state.replay_id} onClick={() => { mutate.reset(); dialog.current?.showModal() }}>Replay</Button>
+          <Button variant="primary" icon={label === 'running' ? <Pause /> : <Play />}
+            busy={busy && mutate.variables !== 'replay'} disabled={busy || label === 'complete'}
+            onClick={() => mutate.mutate(mainCommand)}>
+            {label === 'running' ? 'Pause' : label === 'paused' ? 'Resume' : 'Start'}
+          </Button>
         </div>
       </>}
-      {mutate.error && <Failure error={mutate.error} />}
+      {mutate.error && !replayError && <Failure error={mutate.error} />}
     </section>
-    <dialog ref={dialog} aria-labelledby="replay-title">
-      <h2 id="replay-title">Replay synthetic transactions?</h2>
-      <p>This starts another run from the beginning. Existing cases and decisions stay in the queue.</p>
-      <form method="dialog" className="button-row">
-        <button className="button" autoFocus>Cancel</button>
-        <button className="button primary" onClick={() => mutate.mutate('replay')}>Start new replay</button>
-      </form>
-    </dialog>
+    <ConfirmDialog dialogRef={dialog} title="Replay synthetic transactions?"
+      description="This creates another run from the beginning. Previous cases and analyst decisions stay in the queue."
+      confirm="Confirm replay" busy={busy && mutate.variables === 'replay'}
+      onCancel={cancel} onConfirm={() => { if (!busy) mutate.mutate('replay') }} error={replayError} />
   </details>
 }

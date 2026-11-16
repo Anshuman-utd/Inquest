@@ -75,8 +75,8 @@ export function ConfirmDialog({ dialogRef, title, description, confirm, onConfir
   const titleId = useId()
   const descriptionId = useId()
   return <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => {
-    if (busy) event.preventDefault()
-    else onCancel()
+    event.preventDefault()
+    if (!busy) onCancel()
   }}>
     <h2 id={titleId}>{title}</h2>
     <p id={descriptionId}>{description}</p>
