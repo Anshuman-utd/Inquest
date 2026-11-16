@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { ChartNoAxesCombined, ClipboardList, Database, LogIn, LogOut, Monitor, Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ChartNoAxesCombined, ClipboardList, Database, LogIn, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   BrowserRouter, Link, NavLink, Navigate, Outlet, Route, Routes, useLocation, useSearchParams,
@@ -11,7 +11,7 @@ import { Evaluations } from './evaluation'
 import { Explorer } from './explorer'
 import { Queue } from './queue'
 import { Simulator } from './simulator'
-import { Brand, Failure, Loading, Missing, short } from './ui'
+import { Brand, Button, Failure, Loading, Missing, short } from './ui'
 import '@fontsource-variable/geist'
 import '@fontsource/ibm-plex-mono/400.css'
 import './styles.css'
@@ -99,8 +99,8 @@ function Auth({ signup = false }: { signup?: boolean }) {
 }
 
 const links = [
-  { to: '/', label: 'Case Queue', icon: ClipboardList },
-  { to: '/explorer', label: 'Transaction Explorer', icon: Database },
+  { to: '/', label: 'Cases', icon: ClipboardList },
+  { to: '/explorer', label: 'Explorer', icon: Database },
   { to: '/evaluation', label: 'Evaluation', icon: ChartNoAxesCombined },
 ]
 
@@ -109,6 +109,14 @@ function Workspace() {
   const location = useLocation()
   const [logoutError, setLogoutError] = useState<Error | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const account = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !account.current?.contains(event.target)) account.current?.removeAttribute('open')
+    }
+    document.addEventListener('pointerdown', dismiss)
+    return () => document.removeEventListener('pointerdown', dismiss)
+  }, [])
   async function signOut() {
     setLoggingOut(true)
     try {
@@ -128,32 +136,47 @@ function Workspace() {
     <a className="skip-link" href="#main">Skip to content</a>
     <aside className="sidebar">
       <Link className="brand-link" to="/" aria-label="Inquest case queue"><Brand /></Link>
-      <div className="rail-label">Workspace</div>
+      
       <nav aria-label="Workspace">
         {links.map(({ to, label, icon: Icon }) => {
           const active = to === '/' && location.pathname.startsWith('/cases/')
-          return <NavLink key={to} to={to} end={to === '/'} title={label} className={active ? 'active' : undefined}>
+          return <NavLink key={to} to={to} end={to === '/'} title={label} aria-current={active ? 'page' : undefined} className={active ? 'active' : undefined}>
             <Icon size={17} aria-hidden /><span>{label}</span>
           </NavLink>
         })}
       </nav>
       <div className="rail-footer"><span className="fixture-dot" /><span>Synthetic data</span></div>
     </aside>
-    <div className="workspace-content">
-      <header className="topbar">
-        <span className="workspace-identifier">Workspace <span className="mono" title={session.data.workspace_id}>{short(session.data.workspace_id)}</span></span>
-        <div className="top-actions">
-          <Simulator /><ThemeControl />
-          <button className="button icon-button" type="button" aria-label="Sign out" title="Sign out" disabled={loggingOut} onClick={() => void signOut()}>
-            <LogOut size={16} aria-hidden />
-          </button>
+    <header className="topbar">
+      <Link className="compact-brand" to="/" aria-label="Inquest case queue"><Brand /></Link>
+      <span className="workspace-identifier">Workspace <span className="mono" title={session.data.workspace_id}>{short(session.data.workspace_id)}</span></span>
+      <div className="top-actions">
+        <Simulator />
+        <div className="header-preferences">
+          <ThemeControl />
+          <details className="account-menu" ref={account} onKeyDown={event => {
+            if (event.key === 'Escape') {
+              account.current?.removeAttribute('open')
+              account.current?.querySelector('summary')?.focus()
+            }
+          }}>
+            <summary className="button icon-button" aria-label="Account" title="Account"><UserRound aria-hidden /></summary>
+            <section className="account-panel" aria-label="Account details">
+              <h2>Analyst account</h2>
+              <dl>
+                <div><dt>Workspace ID</dt><dd className="mono" title={session.data.workspace_id}>{short(session.data.workspace_id)}</dd></div>
+                <div><dt>Analyst ID</dt><dd className="mono" title={session.data.analyst_id}>{short(session.data.analyst_id)}</dd></div>
+              </dl>
+              <Button variant="ghost" icon={<LogOut />} busy={loggingOut} onClick={() => void signOut()}>Sign out</Button>
+              {logoutError && <Failure error={logoutError} retry={() => void signOut()} />}
+            </section>
+          </details>
         </div>
-      </header>
-      <main id="main" tabIndex={-1} className="content">
-        {logoutError && <Failure error={logoutError} retry={() => void signOut()} />}
-        <Outlet />
-      </main>
-    </div>
+      </div>
+    </header>
+    <main id="main" tabIndex={-1} className="content">
+      <Outlet />
+    </main>
   </div>
 }
 
