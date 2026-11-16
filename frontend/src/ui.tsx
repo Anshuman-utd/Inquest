@@ -1,7 +1,7 @@
 import {
   AlertCircle, ArrowUpRight, CircleCheck, CircleHelp, Clock3, LoaderCircle, ShieldAlert, ShieldCheck,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 export const number = new Intl.NumberFormat('en-IN')
@@ -50,6 +50,31 @@ export function PageHeading({ title, description, children }: {
   </div>
 }
 
+type ButtonProps = ComponentPropsWithoutRef<'button'> & {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'caution' | 'link'
+  size?: 'small' | 'medium' | 'large'
+  icon?: ReactNode
+  busy?: boolean
+}
+
+export function Button({ variant = 'secondary', size = 'medium', icon, busy = false,
+  className = '', disabled, children, type = 'button', ...props }: ButtonProps) {
+  return <button {...props} type={type} className={`button ${variant} ${size} ${className}`}
+    disabled={disabled || busy} aria-busy={busy || undefined}>
+    {(icon || busy) && <span className="button-icon" aria-hidden>
+      {busy ? <LoaderCircle size={16} className="animate-spin" /> : icon}
+    </span>}
+    {children}
+  </button>
+}
+
+export function Skeleton({ text, className = '' }: { text: string; className?: string }) {
+  return <div className={`skeleton-state ${className}`} role="status">
+    <span className="sr-only">{text}</span>
+    <div aria-hidden className="skeleton-lines">{Array.from({ length: 4 }, (_, i) => <span key={i} />)}</div>
+  </div>
+}
+
 export function Loading({ text = 'Loading…' }: { text?: string }) {
   return <div className="state" role="status"><LoaderCircle className="animate-spin" size={18} aria-hidden />{text}</div>
 }
@@ -57,7 +82,7 @@ export function Loading({ text = 'Loading…' }: { text?: string }) {
 export function Failure({ error, retry }: { error: Error; retry?: () => void }) {
   return <div className="state error" role="alert">
     <AlertCircle size={18} aria-hidden /><span>{error.message}</span>
-    {retry && <button className="button" type="button" onClick={retry}>Try again</button>}
+    {retry && <Button onClick={retry}>Try again</Button>}
   </div>
 }
 
@@ -66,5 +91,5 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
 }
 
 export function Missing() {
-  return <><PageHeading title="Page unavailable" /><Link to="/">Back to case queue</Link></>
+  return <><PageHeading title="Page unavailable" /><section className="panel section"><Empty title="This page could not be found">Open Cases to return to your workspace.</Empty><Link to="/">Back to case queue</Link></section></>
 }

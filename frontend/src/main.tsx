@@ -12,7 +12,7 @@ import { Explorer } from './explorer'
 import { Queue } from './queue'
 import { Simulator } from './simulator'
 import { Brand, Failure, Loading, Missing, short } from './ui'
-import '@fontsource-variable/inter'
+import '@fontsource-variable/geist'
 import '@fontsource/ibm-plex-mono/400.css'
 import './styles.css'
 
