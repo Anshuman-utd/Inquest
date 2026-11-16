@@ -12,6 +12,12 @@ export function useSimulator() {
   })
 }
 
+export function openSimulator() {
+  const control = document.getElementById('simulator-trigger')
+  if (control?.parentElement instanceof HTMLDetailsElement) control.parentElement.open = true
+  control?.focus()
+}
+
 export function Simulator() {
   const query = useSimulator()
   const client = useQueryClient()
@@ -47,7 +53,7 @@ export function Simulator() {
       menu.current?.querySelector('summary')?.focus()
     }
   }}>
-    <summary className="button" title="Simulator controls">
+    <summary id="simulator-trigger" className="button" title="Simulator controls">
       <Radio size={16} aria-hidden />
       <span>Simulator</span><span className="sim-summary">{state ? human(state.state || 'idle') : '…'}</span>
     </summary>

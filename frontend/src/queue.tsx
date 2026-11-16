@@ -1,10 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, Search } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ListFilter, Search, X } from 'lucide-react'
 import { useDeferredValue } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { request, type QueueQuery, type Schema } from './api'
-import { useSimulator } from './simulator'
-import { amount, Empty, Failure, Loading, number, PageHeading, percent, short, Status, timestamp } from './ui'
+import { openSimulator, useSimulator } from './simulator'
+import { amount, Button, Empty, Failure, number, PageHeading, percent, short, Skeleton, Status, timestamp } from './ui'
 
 const columns = [
   ['status', 'Status'], ['risk', 'Risk score'], ['amount', 'Amount'],
@@ -18,6 +18,7 @@ const states = [
 
 export function Queue() {
   const [search, setSearch] = useSearchParams()
+  const location = useLocation()
   const simulator = useSimulator()
   const deferred = useDeferredValue(search.toString())
   const params = new URLSearchParams(deferred)
@@ -47,45 +48,71 @@ export function Queue() {
   }
 
   return <>
-    <PageHeading title="Case Queue" description="Review alerts and manage investigations." />
-    {counts && <dl className="queue-stats">
-      <div><dt>Total cases</dt><dd>{number.format(total || 0)}</dd></div>
-      <div><dt>Queued</dt><dd>{number.format(counts.queued || 0)}</dd></div>
-      <div><dt>Investigating</dt><dd>{number.format(counts.investigating || 0)}</dd></div>
-      <div><dt>Needs review</dt><dd>{number.format(counts.review || 0)}</dd></div>
-    </dl>}
+    <PageHeading title="Case queue" description="Review flagged card and UPI payments." />
     <section className="panel queue" aria-label="Case queue">
+      <dl className="queue-summary" aria-label="Workspace case counts">
+        {[
+          ['Total cases', total], ['Queued', counts?.queued], ['Investigating', counts?.investigating],
+          ['Needs review', counts?.review],
+        ].map(([label, value]) => <div key={label}>
+          <dt>{label}</dt><dd>{counts ? number.format(Number(value || 0)) : '—'}</dd>
+        </div>)}
+      </dl>
       <div className="filters">
         <label className="search-field">
           <Search size={16} aria-hidden />
-          <input aria-label="Search cases" placeholder="Search case, transaction, customer or merchant" maxLength={100}
+          <input aria-label="Search cases" placeholder="Search cases, transactions, or merchants" maxLength={100}
             value={search.get('q') || ''} onChange={event => change({ q: event.target.value }, true)} />
         </label>
-        <label className="sr-only" htmlFor="status-filter">Case status</label>
-        <select id="status-filter" value={search.get('status') || ''} onChange={event => change({ status: event.target.value })}>
-          <option value="">All statuses</option>
-          {states.map(([key, label]) => <option value={key} key={key}>{label}</option>)}
-        </select>
-        <label className="sr-only" htmlFor="channel-filter">Payment channel</label>
-        <select id="channel-filter" value={search.get('channel') || ''} onChange={event => change({ channel: event.target.value })}>
-          <option value="">All channels</option><option value="upi">UPI</option><option value="card">Card</option>
-        </select>
-        <label className="sr-only" htmlFor="risk-filter">Minimum risk</label>
-        <select id="risk-filter" value={search.get('min_score') || ''} onChange={event => change({ min_score: event.target.value })}>
-          <option value="">All risk scores</option><option value="0.01">Risk ≥ 1%</option>
-          <option value="0.1">Risk ≥ 10%</option><option value="0.5">Risk ≥ 50%</option>
-        </select>
-        {filtersApplied && <button className="button text-button" type="button" onClick={() => change({ q: '', status: '', channel: '', min_score: '' })}>Clear filters</button>}
+        {search.has('q') && <Button variant="ghost" size="small" className="icon-button" aria-label="Clear search" title="Clear search" icon={<X />} onClick={() => change({ q: '' })} />}
+        <details className="filter-menu" onKeyDown={event => {
+          if (event.key === 'Escape') {
+            event.currentTarget.open = false
+            event.currentTarget.querySelector('summary')?.focus()
+          }
+        }}>
+          <summary className="button"><ListFilter aria-hidden />Filters</summary>
+          <div className="filter-options">
+            <label>Case status
+              <select id="status-filter" value={search.get('status') || ''} onChange={event => change({ status: event.target.value })}>
+                <option value="">All statuses</option>
+                {states.map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+              </select>
+            </label>
+            <label>Payment channel
+              <select id="channel-filter" value={search.get('channel') || ''} onChange={event => change({ channel: event.target.value })}>
+                <option value="">All channels</option><option value="upi">UPI</option><option value="card">Card</option>
+              </select>
+            </label>
+            <label>Minimum risk
+              <select id="risk-filter" value={search.get('min_score') || ''} onChange={event => change({ min_score: event.target.value })}>
+                <option value="">All risk scores</option><option value="0.01">Risk ≥ 1%</option>
+                <option value="0.1">Risk ≥ 10%</option><option value="0.5">Risk ≥ 50%</option>
+              </select>
+            </label>
+          </div>
+        </details>
       </div>
-      {data.isPending && <Loading text="Loading cases…" />}
+      {filtersApplied && <div className="applied-filters" aria-label="Active filters">
+        {search.has('q') && <span className="filter-chip">Search: {search.get('q')}</span>}
+        {search.has('status') && <Button variant="ghost" size="small" className="filter-chip" icon={<X />} aria-label="Remove status filter" onClick={() => change({ status: '' })}>
+          {states.find(([key]) => key === search.get('status'))?.[1] || 'Status'}
+        </Button>}
+        {search.has('channel') && <Button variant="ghost" size="small" className="filter-chip" icon={<X />} aria-label="Remove channel filter" onClick={() => change({ channel: '' })}>{search.get('channel') === 'upi' ? 'UPI' : 'Card'}</Button>}
+        {search.has('min_score') && <Button variant="ghost" size="small" className="filter-chip" icon={<X />} aria-label="Remove risk filter" onClick={() => change({ min_score: '' })}>Risk ≥ {percent(Number(search.get('min_score')), 0)}</Button>}
+        <Button variant="link" size="small" onClick={() => change({ q: '', status: '', channel: '', min_score: '' })}>Clear filters</Button>
+      </div>}
+      {data.isPending && <Skeleton className="queue-skeleton" text="Loading cases…" />}
       {data.error && <Failure error={data.error} retry={() => void data.refetch()} />}
       {data.data && data.data.items.length === 0 && !data.isPlaceholderData && (
         filtersApplied || !atFirstPage
           ? <Empty title="No matching cases">Change the filters or return to the first page.</Empty>
           : <Empty title="No cases yet">{simulator.data?.state === 'running'
             ? 'The simulator is scanning synthetic transactions.'
-            : 'Open Simulator and start a transaction replay to populate the queue.'}</Empty>
+            : 'Start a transaction replay to populate the queue.'}</Empty>
       )}
+      {data.data?.items.length === 0 && !data.isPlaceholderData && !filtersApplied && atFirstPage && simulator.data?.state !== 'running' &&
+        <div className="queue-empty-action"><Button onClick={openSimulator}>Open simulator</Button></div>}
       {!!data.data?.items.length && <div className="table-scroll" role="region" tabIndex={0} aria-label="Case rows">
         <table className="case-table">
           <thead><tr>
@@ -95,7 +122,7 @@ export function Queue() {
               const Icon = !active ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown
               return <th scope="col" key={key} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}
                 className={key === 'risk' || key === 'amount' ? 'numeric' : undefined}>
-                <button type="button" className="sort-button" onClick={() => change({ sort: key, direction: active && direction === 'desc' ? 'asc' : 'desc' })}>
+                <button type="button" className="button ghost small sort-button" onClick={() => change({ sort: key, direction: active && direction === 'desc' ? 'asc' : 'desc' })}>
                   {label}<Icon size={13} aria-hidden />
                 </button>
               </th>
@@ -116,9 +143,9 @@ export function Queue() {
       {data.data && (data.data.next_cursor || !atFirstPage || !!data.data.items.length) && <footer className="table-footer">
         <span role="status">{data.data.items.length} {data.data.items.length === 1 ? 'case' : 'cases'} shown</span>
         <div className="button-row">
-          {!atFirstPage && <button className="button" type="button" onClick={() => change({ after: '' })}><ArrowLeft size={14} aria-hidden />First page</button>}
-          <button className="button" type="button" disabled={!data.data.next_cursor || data.isPlaceholderData}
-            onClick={() => change({ after: data.data?.next_cursor || '' })}>Next page<ArrowRight size={14} aria-hidden /></button>
+          {!atFirstPage && <Button size="small" icon={<ArrowLeft />} onClick={() => change({ after: '' })}>First page</Button>}
+          <Button size="small" disabled={!data.data.next_cursor || data.isPlaceholderData}
+            onClick={() => change({ after: data.data?.next_cursor || '' })}>Next page<ArrowRight aria-hidden /></Button>
         </div>
       </footer>}
     </section>
