@@ -24,6 +24,28 @@ MAX_TOKENS = 6000
 MAX_TOOLS = 8
 MAX_PLANS = 6
 EVIDENCE: TypeAdapter[ToolEvidence] = TypeAdapter(ToolEvidence)
+REPORT_INSTRUCTIONS = (
+    "Return a JSON object with verdict, confidence (number 0–1), recommended_action, "
+    "and evidence (an array of 1–3 objects with evidence_id, field, and value). "
+    'Use one exact verdict/action pair: "needs_human_review"/"escalate", '
+    '"legit"/"release", or "fraud"/"block". '
+    "Copy evidence IDs and scalar values exactly. Field paths start inside the observation. "
+    'Use "transaction.source_sequence" for a transaction or "last_5m.attempts" for velocity. '
+    'Use "needs_human_review"/"escalate" when evidence is insufficient. '
+    "Release needs at least 3 prior attempts on both the device and the merchant. "
+    "Block needs strong corroborating signals from two different tools."
+)
+
+
+def transaction_fact(results: list[ToolEvidence]) -> Fact | None:
+    for item in results:
+        if item.status == "ok" and item.observation.tool == "get_transaction":
+            return Fact(
+                evidence_id=item.evidence_id,
+                field="transaction.source_sequence",
+                value=item.cutoff.source_sequence,
+            )
+    return None
 
 
 class State(TypedDict, total=False):
@@ -277,23 +299,22 @@ class Steps:
 
     def synthesize(self, state: State) -> State:
         repair = bool(state.get("error"))
+        instructions = REPORT_INSTRUCTIONS
+        if repair:
+            facts = [EVIDENCE.validate_python(item) for item in state.get("observations", [])]
+            if (fact := transaction_fact(facts)) is not None:
+                template = {
+                    "verdict": "needs_human_review",
+                    "recommended_action": "escalate",
+                    "evidence": [fact.model_dump(mode="json")],
+                }
+                instructions = (
+                    "Repair: return one JSON object with these exact fields and values, "
+                    "adding only confidence as a number between 0 and 1: "
+                    + json.dumps(template, separators=(",", ":"))
+                )
         try:
-            draft = self.model(
-                state,
-                "Return JSON: verdict, confidence (0–1), recommended_action, evidence. "
-                "Include 1–3 facts {evidence_id,field,value}; copy exact scalar values. "
-                'Example field: "transaction.amount_minor". Paths are relative to observation; '
-                "omit the observation and tool prefixes. Use needs_human_review + escalate by "
-                "default. Use legit + release only with 3+ prior attempts on BOTH the device "
-                "and merchant. Use fraud + block only with two separate tools showing strong "
-                "velocity, device sharing, recipient concentration, or implausible travel."
-                + (
-                    " Repair: use needs_human_review + escalate and cite exactly one transaction "
-                    "fact at transaction.source_sequence."
-                    if repair
-                    else ""
-                ),
-            )
+            draft = self.model(state, instructions)
             return {"draft": draft, "repairs": int(repair), "error": ""}
         except ProviderUnavailable as exc:
             return {
@@ -320,25 +341,7 @@ class Steps:
             if state.get("error") == "provider_unavailable"
             else "invalid_report"
         )
-        transaction = next(
-            (
-                item
-                for item in results
-                if item.status == "ok" and item.observation.tool == "get_transaction"
-            ),
-            None,
-        )
-        facts = (
-            (
-                Fact(
-                    evidence_id=transaction.evidence_id,
-                    field="transaction.source_sequence",
-                    value=transaction.cutoff.source_sequence,
-                ),
-            )
-            if transaction is not None
-            else ()
-        )
+        fact = transaction_fact(results)
         return {
             "error": "",
             "recording_missing": reason == "provider_unavailable",
@@ -346,7 +349,7 @@ class Steps:
                 verdict="needs_human_review",
                 confidence=0,
                 recommended_action="escalate",
-                evidence=facts,
+                evidence=(fact,) if fact is not None else (),
                 status="inconclusive",
                 reason=reason,
             ).model_dump(mode="json"),

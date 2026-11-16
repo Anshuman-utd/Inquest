@@ -187,6 +187,21 @@ class RepairProvider:
             return Completion(content='{"tool":"done"}', tokens=80)
         context = json.loads(prompt.split("\n", 1)[1])
         evidence_id = context["observations"][0]["evidence_id"]
+        if "Repair:" in prompt:
+            template = json.loads(prompt.split("0 and 1: ", 1)[1].split("\n", 1)[0])
+            assert template == {
+                "verdict": "needs_human_review",
+                "recommended_action": "escalate",
+                "evidence": [
+                    {
+                        "evidence_id": evidence_id,
+                        "field": "transaction.source_sequence",
+                        "value": 150,
+                    }
+                ],
+            }
+            return Completion(content=json.dumps(template | {"confidence": 0.5}), tokens=130)
+        assert '"needs_human_review"/"escalate"' in prompt
         return Completion(
             content=json.dumps(
                 {
@@ -197,7 +212,7 @@ class RepairProvider:
                         {
                             "evidence_id": evidence_id,
                             "field": "transaction.source_sequence",
-                            "value": 150 if "Repair:" in prompt else 999,
+                            "value": 999,
                         }
                     ],
                 }
