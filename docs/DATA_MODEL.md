@@ -24,12 +24,14 @@ Collect and SIM-change events are synthetic observations with ordinary legitimat
 
 Assign hidden episode IDs, labels, and scenario tags during generation. Vary event counts, timing, values, and missingness. Some attempts in an episode may be legitimate, so label attempts individually. Keep background and injected behavior overlapping. Merchant collusion and cash-out are simplified indicators of activity visible to this demo. Record a fixed seed, configuration, generator version, counts, time span, and checksum. Use deterministic identifiers and a stable generation order, with separately derived random streams for world creation and scenario injection.
 
-## Postgres proposal
+## Postgres
 
 | Table | Core fields and integrity |
 | --- | --- |
 | `workspaces`, `analysts`, `workspace_memberships` | Workspace identity, analyst identity and role. Phase 6 resolves analyst identities by provider and stable subject, using the GitHub account ID or the Google OpenID Connect subject. Actor identities drive the audit trail. Workspace ownership is enforced on case and simulator routes. |
-| `datasets`, `replay_runs` | Shared, read-only fixture version, seed and manifest hash. Simulator runs record dataset, state, cursor and speed. Shared replay progress and scores are service-managed. A replay creates a distinct run and retains prior cases. |
+| `oauth_identities`, `oauth_attempts`, `analyst_sessions` | Provider and stable subject map to one analyst and workspace. Authorization attempts are browser-bound and expire after ten minutes. Sessions are opaque, revocable and stored by token hash. |
+| `datasets` | Shared, read-only fixture version, seed and manifest hash. |
+| `replay_runs`, `replay_jobs` | Each workspace has a durable active run, cursor and state. The scheduler publishes batches from the shared, label-free scorer output. A replay creates a distinct run and retains prior cases. |
 | `customers`, `merchants`, `devices` | Dataset-scoped synthetic IDs, display identifiers and allowed entity attributes. Device identities can recur across customers. Merchant risk uses an observable profile valid at the event cutoff. |
 | `transactions` | Dataset and source sequence, customer, counterparty, device, synthetic payment instrument ID, event timestamp, amount in integer minor units, ISO currency, channel, authorization outcome if observed, and approximate location plus source and accuracy. Composite foreign keys prevent cross-fixture joins. Counterparties use the merchant table, with an explicit type for synthetic transfer recipients. |
 | `evaluation_truth` | Transaction key, fraud label, scenario and episode ID in an evaluation-only schema. Evaluator credentials can read it. API and tool roles have no grants. |
@@ -37,7 +39,8 @@ Assign hidden episode IDs, labels, and scenario tags during generation. Vary eve
 | `cases` | Score and workspace, status, optimistic version and timestamps. Unique case per replay and transaction. |
 | `investigations` | Case ID, unique graph thread ID, status, lease, provider/model/config versions, report and budget counters. A partial unique index limits a case to one active investigation. |
 | `tool_calls`, `investigation_events` | Validated tool inputs, observations and stable evidence IDs. Events have a per-investigation sequence, typed payload and stable deduplication key. |
-| `decisions` | Append-only row with investigation ID, actor, operation, resolved disposition, note, prior case version, and timestamp. Unique investigation decision and workspace-scoped idempotency key. |
+| `decisions` | Append-only row with investigation ID, actor, operation, resolved disposition, prior case version, and timestamp. Unique investigation decision and workspace-scoped idempotency key. |
+| `notes` | Workspace and case, author, body, timestamp and optional decision reference. Notes stay out of model prompts. |
 | `workspace_usage`, `global_usage`, `ip_rate_limits` | UTC-day workspace and global budget reservations, operator kill switch, and bounded per-IP counters. Persist quota updates atomically, count starts idempotently, and use expiring keyed IP hashes. |
 | `eval_runs`, `eval_case_results` | Cohort and configuration hashes, measured aggregates and per-case outcome, usage, latency and failure reason. Unique run and transaction result. |
 
@@ -45,7 +48,7 @@ Use Alembic revisions for application schema and grants, with a separate migrati
 
 ## Replay and point-in-time rules
 
-Import the synthetic fixture separately from replay. Every operational history query restricts to the case's replay, fixture and the earlier event key `(occurred_at, source_sequence)`. An event is visible only after the replay cursor processes it. Give the scorer and tools the same cutoff so a preloaded fixture cannot reveal future behavior. Persist score, case creation if applicable, and replay cursor advancement atomically. A failed event can be retried with its original key.
+Import the synthetic fixture separately from replay. Investigation tools restrict history to the case’s fixture and earlier event keys `(occurred_at, source_sequence)`. A case enters the queue after the replay cursor processes its transaction. The explorer shows the shared fixture and marks alerts based on workspace-scoped cases. Give the scorer and tools the same cutoff so a preloaded fixture cannot reveal future behavior. Persist score, case creation if applicable, and replay cursor advancement atomically. A failed event can be retried with its original key.
 
 Compute customer attempt and decline counts in trailing 5-minute, 1-hour, and 24-hour windows. Use trailing 30-day amount mean, variance and count for a z-score, with an explicit insufficient-history feature. Add distance from home, distance and elapsed time since the last reliable physical event, and prior device and merchant seen flags. Use merchant attempt statistics observable at the cutoff. Transaction geography distinguishes an observed physical point from an IP-derived or remote signal. Preserve missingness instead of inventing coordinates or travel speed. A label, an episode tag, an eventual chargeback, or a lifetime aggregate is excluded from scoring and tools. [Fraud Detection Handbook](https://fraud-detection-handbook.github.io/fraud-detection-handbook/)
 

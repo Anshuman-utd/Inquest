@@ -12,7 +12,7 @@ INQUEST_GOOGLE_CLIENT_SECRET=
 
 1. In [GitHub Developer Settings](https://github.com/settings/developers), create an **OAuth App**. Set the homepage URL to `http://localhost:5173` and the authorization callback URL to `http://localhost:5173/api/v1/auth/github/callback`. Generate a client secret and fill in the GitHub entries.
 2. In [Google Auth Platform](https://console.cloud.google.com/auth/clients), configure branding and audience, then create a **Web application** client. Add `http://localhost:5173/api/v1/auth/google/callback` under **Authorized redirect URIs**. For an app in Testing, include your Google account in the test-user list. Fill in the Google entries.
-3. Open the app at `http://localhost:5173`. After changing credentials, recreate the API with `docker compose up -d --force-recreate api`.
+3. Run `docker compose up --build` and open `http://localhost:5173`. After changing credentials, recreate the API with `docker compose up -d --force-recreate api`.
 
 A provider needs both its client ID and secret to appear enabled. The first successful sign-in creates a personal workspace. Each provider account is a distinct identity.
 

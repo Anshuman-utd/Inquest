@@ -34,6 +34,17 @@ services:
   api:
     build: .
     mem_limit: 512m
+    command:
+      - uvicorn
+      - inquest.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips=172.29.67.10
+      - --no-access-log
+    networks: [default, console]
     environment:
       INQUEST_DATABASE_URL: postgresql+psycopg://inquest_api:local_api@db:5432/inquest
       INQUEST_WEB_ORIGIN: ${INQUEST_WEB_ORIGIN:-http://localhost:5173}
@@ -61,6 +72,23 @@ services:
     depends_on:
       seed:
         condition: service_completed_successfully
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${INQUEST_WEB_PORT:-5173}:80"
+    networks:
+      console:
+        ipv4_address: 172.29.67.10
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  console:
+    ipam:
+      config:
+        - subnet: 172.29.67.0/24
+
 volumes:
   postgres_data:
   response_cache:
