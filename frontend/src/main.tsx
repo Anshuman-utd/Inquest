@@ -11,7 +11,7 @@ import { Evaluations } from './evaluation'
 import { Explorer } from './explorer'
 import { Queue } from './queue'
 import { Simulator } from './simulator'
-import { Brand, Button, Failure, Loading, Missing, short } from './ui'
+import { Brand, Button, Failure, Loading, Missing, short, useDismissableDisclosure } from './ui'
 import '@fontsource-variable/geist'
 import '@fontsource/ibm-plex-mono/400.css'
 import './styles.css'
@@ -113,13 +113,7 @@ function Workspace() {
   const [logoutError, setLogoutError] = useState<Error | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const account = useRef<HTMLDetailsElement>(null)
-  useEffect(() => {
-    const dismiss = (event: PointerEvent) => {
-      if (event.target instanceof Node && !account.current?.contains(event.target)) account.current?.removeAttribute('open')
-    }
-    document.addEventListener('pointerdown', dismiss)
-    return () => document.removeEventListener('pointerdown', dismiss)
-  }, [])
+  useDismissableDisclosure(account)
   async function signOut() {
     setLoggingOut(true)
     try {
@@ -157,12 +151,7 @@ function Workspace() {
         <Simulator />
         <div className="header-preferences">
           <ThemeControl />
-          <details className="account-menu" ref={account} onKeyDown={event => {
-            if (event.key === 'Escape') {
-              account.current?.removeAttribute('open')
-              account.current?.querySelector('summary')?.focus()
-            }
-          }}>
+          <details className="account-menu" ref={account}>
             <summary className="button icon-button" aria-label="Account" title="Account"><UserRound aria-hidden /></summary>
             <section className="account-panel" aria-label="Account details">
               <h2>Analyst account</h2>

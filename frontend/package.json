@@ -10,7 +10,10 @@
     "dev": "vite --strictPort",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --strictPort",
-    "generate:api": "openapi-typescript ../docs/openapi.json -o src/schema.ts"
+    "generate:api": "openapi-typescript ../docs/openapi.json -o src/schema.ts",
+    "lint": "oxlint --react-plugin --jsx-a11y-plugin --ignore-pattern src/schema.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

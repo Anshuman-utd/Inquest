@@ -35,7 +35,8 @@ function Contributions({ data }: { data: Detail }) {
       <strong className="score mono">{percent(data.score, 2)}</strong>
     </div>
     <div className="contribution-label"><h3>Top risk drivers</h3><span>Signed model contribution</span></div>
-    <ul className="contributions" aria-label="Top model feature contributions">
+    {!data.contributions.length && <Empty title="No risk drivers recorded" />}
+    {!!data.contributions.length && <ul className="contributions" aria-label="Top model feature contributions">
       {data.contributions.map(row => <li key={row.feature}>
         <span>{human(row.feature)}</span>
         <span className="contribution-track" aria-hidden>
@@ -43,7 +44,7 @@ function Contributions({ data }: { data: Detail }) {
         </span>
         <span className="mono numeric">{row.raw_margin_delta >= 0 ? '+' : ''}{row.raw_margin_delta.toFixed(3)}</span>
       </li>)}
-    </ul>
+    </ul>}
     <p className="muted caption">TreeSHAP raw-margin units · <span className="mono">{data.model_version}</span></p>
   </section>
 }
@@ -173,7 +174,7 @@ function Timeline({ entries, connection, register }: {
     ? [[entry.payload.call_sequence, entry] as const] : []))
   const observed = new Set(entries.flatMap(entry => entry.kind === 'tool_observed' ? [entry.payload.result.call_sequence] : []))
   return <section className="panel section timeline">
-    <div className="section-heading"><h2>Investigation timeline</h2><span role="status" className="stream-status" data-connection={connection}>{streamLabels[connection]}</span></div>
+    <div className="section-heading"><h2>Investigation timeline</h2><output className="stream-status" data-connection={connection}>{streamLabels[connection]}</output></div>
     {!entries.length && <p className="muted">Waiting for investigation events.</p>}
     <ol>
       {entries.map(entry => {
@@ -239,7 +240,7 @@ function Investigation({ data, run }: { data: Detail; run: string }) {
     <Timeline {...stream} register={register} />
     <section className="panel section report">
       <div className="section-heading">
-        <h2>Agent recommendation</h2>
+        <h2 id="agent-recommendation" tabIndex={-1}>Agent recommendation</h2>
         {current && <span className="tag">{human(current.mode)} mode</span>}
       </div>
       {snapshot.error && <Failure error={snapshot.error} retry={() => void snapshot.refetch()} />}
@@ -309,7 +310,8 @@ export function CasePage() {
           <Status value={data.disposition || data.status} />
           {data.status === 'queued' && <Button variant="primary" icon={<Play />} onClick={() => start.mutate()} busy={start.isPending}>Start investigation</Button>}
           {data.status === 'review' && !data.decision && <Button variant="link" icon={<ArrowDown />} onClick={() => {
-            document.getElementById('analyst-decision')?.focus()
+            const target = document.getElementById('analyst-decision') || document.getElementById('agent-recommendation')
+            target?.focus()
           }}>Review decision</Button>}
         </div>
       </PageHeading>

@@ -10,3 +10,7 @@ __pycache__/
 /.cache/
 /frontend/node_modules/
 /frontend/dist/
+
+# Frontend browser-test output
+frontend/test-results/
+frontend/playwright-report/

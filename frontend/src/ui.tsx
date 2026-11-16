@@ -1,7 +1,7 @@
 import {
   AlertCircle, ArrowUpRight, CircleCheck, CircleHelp, Clock3, LoaderCircle, ShieldAlert, ShieldCheck,
 } from 'lucide-react'
-import { useId, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react'
+import { useEffect, useId, type ComponentPropsWithoutRef, type ReactNode, type Ref, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 
 export const number = new Intl.NumberFormat('en-IN')
@@ -50,6 +50,26 @@ export function PageHeading({ title, description, children }: {
   </div>
 }
 
+export function useDismissableDisclosure(ref: RefObject<HTMLDetailsElement | null>) {
+  useEffect(() => {
+    function onPointer(event: PointerEvent) {
+      if (event.target instanceof Node && !ref.current?.contains(event.target)) ref.current?.removeAttribute('open')
+    }
+    function onEscape(event: KeyboardEvent) {
+      const details = ref.current
+      if (event.key !== 'Escape' || !details?.open || !details.contains(document.activeElement) || details.querySelector('dialog[open]')) return
+      details.open = false
+      details.querySelector('summary')?.focus()
+    }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onEscape)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onEscape)
+    }
+  }, [ref])
+}
+
 type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: 'primary' | 'secondary' | 'ghost' | 'caution' | 'link'
   size?: 'small' | 'medium' | 'large'
@@ -89,14 +109,14 @@ export function ConfirmDialog({ dialogRef, title, description, confirm, onConfir
 }
 
 export function Skeleton({ text, className = '' }: { text: string; className?: string }) {
-  return <div className={`skeleton-state ${className}`} role="status">
-    <span className="sr-only">{text}</span>
+  return <div className={`skeleton-state ${className}`}>
+    <output className="sr-only">{text}</output>
     <div aria-hidden className="skeleton-lines">{Array.from({ length: 4 }, (_, i) => <span key={i} />)}</div>
   </div>
 }
 
 export function Loading({ text = 'Loading…' }: { text?: string }) {
-  return <div className="state" role="status"><LoaderCircle className="animate-spin" size={18} aria-hidden />{text}</div>
+  return <output className="state"><LoaderCircle className="animate-spin" size={18} aria-hidden />{text}</output>
 }
 
 export function Failure({ error, retry }: { error: Error; retry?: () => void }) {

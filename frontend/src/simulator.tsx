@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, Pause, Play, Radio, RotateCcw } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { ApiError, post, request, type Schema } from './api'
-import { Button, ConfirmDialog, Failure, human, number, short, Skeleton } from './ui'
+import { Button, ConfirmDialog, Failure, human, number, short, Skeleton, useDismissableDisclosure } from './ui'
 
 export function useSimulator() {
   return useQuery({
@@ -38,15 +38,7 @@ export function Simulator() {
     },
   })
 
-  useEffect(() => {
-    function dismiss(event: PointerEvent) {
-      if (event.target instanceof Node && !menu.current?.contains(event.target)) {
-        menu.current?.removeAttribute('open')
-      }
-    }
-    document.addEventListener('pointerdown', dismiss)
-    return () => document.removeEventListener('pointerdown', dismiss)
-  }, [])
+  useDismissableDisclosure(menu)
 
   const label = state?.state || 'idle'
   const busy = mutate.isPending
@@ -58,12 +50,7 @@ export function Simulator() {
     mutate.reset()
   }
 
-  return <details className="simulator" ref={menu} onKeyDown={event => {
-    if (event.key === 'Escape' && !dialog.current?.open) {
-      menu.current?.removeAttribute('open')
-      menu.current?.querySelector('summary')?.focus()
-    }
-  }}>
+  return <details className="simulator" ref={menu}>
     <summary id="simulator-trigger" className="button" title="Simulator controls">
       <Radio aria-hidden />
       <span>Simulator</span><span className="sim-summary">{state ? human(label) : '…'}</span>

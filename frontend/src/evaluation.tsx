@@ -24,7 +24,7 @@ function PrecisionRecall({ cohort }: { cohort: Schema['ScorerCohort'] }) {
   return <section className="panel section pr">
     <div className="section-heading">
       <div><h2>Precision–recall</h2><p>Average precision {cohort.average_precision.toFixed(3)}</p></div>
-      <div className="view-tabs" role="tablist" aria-label="Precision–recall display" onKeyDown={event => {
+      <div className="view-tabs" role="tablist" tabIndex={-1} aria-label="Precision–recall display" onKeyDown={event => {
         const next = event.key === 'Home' ? 'chart' : event.key === 'End' ? 'table'
           : ['ArrowLeft', 'ArrowRight'].includes(event.key) ? view === 'chart' ? 'table' : 'chart' : null
         if (!next) return
@@ -38,7 +38,9 @@ function PrecisionRecall({ cohort }: { cohort: Schema['ScorerCohort'] }) {
       </div>
     </div>
     <div id={`${id}-view`} role="tabpanel" aria-labelledby={`${id}-${view}`} className="precision-view">
-    {view === 'chart' ? <svg viewBox="0 0 540 252" role="img" aria-label={`Precision–recall curve. Locked operating point: ${percent(cohort.recall)} recall, ${percent(cohort.precision)} precision.`}>
+    {view === 'chart' ? (
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the inline chart needs an image role and text alternative.
+      <svg viewBox="0 0 540 252" role="img" aria-label={`Precision–recall curve. Locked operating point: ${percent(cohort.recall)} recall, ${percent(cohort.precision)} precision.`}>
       {ticks.map(value => <g key={value}>
         <line x1={x(0)} x2={x(1)} y1={y(value)} y2={y(value)} className="grid-line" />
         <text x={x(0) - 10} y={y(value) + 4} textAnchor="end">{percent(value, 0)}</text>
@@ -47,14 +49,15 @@ function PrecisionRecall({ cohort }: { cohort: Schema['ScorerCohort'] }) {
       <text x="54" y="14">Precision</text><text x="511" y="247" textAnchor="end">Recall</text>
       <polyline points={line} className="pr-line" />
       <circle cx={x(cohort.recall)} cy={y(cohort.precision)} r={5} className="operating-point" />
-    </svg> : <div className="chart-data">
-      <div className="table-scroll" tabIndex={0} role="region" aria-label="Precision–recall points">
+    </svg>) : <div className="chart-data">
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- this scroll region needs keyboard access. */}
+      <section className="table-scroll" tabIndex={0} aria-label="Precision–recall points">
         <table><thead><tr><th scope="col">Recall</th><th scope="col">Precision</th></tr></thead>
           <tbody>{cohort.pr_curve.map(point => <tr key={point.recall}>
             <td>{percent(point.recall)}</td><td>{percent(point.precision)}</td>
           </tr>)}</tbody>
         </table>
-      </div>
+      </section>
     </div>}
     <p className="caption muted"><span className="point-legend" /> Locked threshold · {percent(cohort.recall)} recall · {percent(cohort.precision)} precision</p>
     </div>
@@ -82,7 +85,8 @@ function ScorerMetrics({ data }: { data: Schema['ScorerEvaluation'] }) {
         <PrecisionRecall cohort={cohort} />
         <section className="panel section">
           <h2>Recall by scenario</h2>
-          <div className="table-scroll scenario-scroll" role="region" tabIndex={0} aria-label="Scorer recall by fraud scenario">
+          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- this scroll region needs keyboard access. */}
+          <section className="table-scroll scenario-scroll" tabIndex={0} aria-label="Scorer recall by fraud scenario">
             <table className="scenarios"><thead><tr><th scope="col">Scenario</th><th scope="col">Recall</th><th scope="col" className="numeric">Caught</th></tr></thead>
               <tbody>{Object.entries(cohort.scenarios).map(([key, scenario]) => <tr key={key}>
                 <td>{scenarios(key)}</td>
@@ -90,7 +94,7 @@ function ScorerMetrics({ data }: { data: Schema['ScorerEvaluation'] }) {
                 <td className="mono numeric">{scenario.fraud ? `${scenario.caught}/${scenario.fraud}` : '—'}</td>
               </tr>)}</tbody>
             </table>
-          </div>
+          </section>
         </section>
       </div>
     </> : <Empty title="Scorer cohort unavailable" />}
@@ -112,7 +116,8 @@ function AgentMetrics({ reports }: { reports: Schema['EvaluationReport'][] }) {
       </select>
     </div>
     <div className="panel">
-      <div className="table-scroll" tabIndex={0} role="region" aria-label="Agent ablation comparison">
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- this scroll region needs keyboard access. */}
+      <section className="table-scroll" tabIndex={0} aria-label="Agent ablation comparison">
         <table className="ablation">
           <thead><tr><th scope="col">Configuration</th><th scope="col">Sample</th><th scope="col">Legit alerts cleared</th>
             <th scope="col">Alerted fraud retained</th><th scope="col">Overall fraud retained</th>
@@ -134,7 +139,7 @@ function AgentMetrics({ reports }: { reports: Schema['EvaluationReport'][] }) {
             </tr>
           })}</tbody>
         </table>
-      </div>
+      </section>
       <p className="caption muted metric-footnote">— indicates an undefined or unavailable metric. Retention includes escalated fraud alerts.</p>
     </div>
   </section>

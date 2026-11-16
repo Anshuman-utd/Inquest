@@ -7,6 +7,12 @@
     <meta name="referrer" content="same-origin">
     <meta name="description" content="Inquest synthetic payment fraud investigation console">
     <title>Inquest</title>
+    <script>
+      const mode = localStorage.getItem('inquest-theme')
+      document.documentElement.dataset.theme = mode === 'light' || mode === 'dark'
+        ? mode
+        : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    </script>
   </head>
   <body>
     <div id="root"></div>

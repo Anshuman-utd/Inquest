@@ -1,10 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ListFilter, Search, X } from 'lucide-react'
-import { useDeferredValue } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useDeferredValue, useRef } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { request, type QueueQuery, type Schema } from './api'
 import { openSimulator, useSimulator } from './simulator'
-import { amount, Button, Empty, Failure, number, PageHeading, percent, short, Skeleton, Status, timestamp } from './ui'
+import { amount, Button, Empty, Failure, number, PageHeading, percent, short, Skeleton, Status, timestamp, useDismissableDisclosure } from './ui'
 
 const columns = [
   ['status', 'Status'], ['risk', 'Risk score'], ['amount', 'Amount'],
@@ -18,7 +18,9 @@ const states = [
 
 export function Queue() {
   const [search, setSearch] = useSearchParams()
-  const location = useLocation()
+  const navigate = useNavigate()
+  const filterMenu = useRef<HTMLDetailsElement>(null)
+  useDismissableDisclosure(filterMenu)
   const simulator = useSimulator()
   const deferred = useDeferredValue(search.toString())
   const params = new URLSearchParams(deferred)
@@ -34,6 +36,7 @@ export function Queue() {
   const counts = data.data?.counts
   const total = counts && Object.values(counts).reduce((sum, value) => sum + value, 0)
   const atFirstPage = !params.has('after')
+  const refreshing = deferred !== search.toString() || data.isPlaceholderData
 
   function change(values: Partial<Record<keyof QueueQuery, string>>, replace = false) {
     setSearch(previous => {
@@ -65,12 +68,7 @@ export function Queue() {
             value={search.get('q') || ''} onChange={event => change({ q: event.target.value }, true)} />
         </label>
         {search.has('q') && <Button variant="ghost" size="small" className="icon-button" aria-label="Clear search" title="Clear search" icon={<X />} onClick={() => change({ q: '' })} />}
-        <details className="filter-menu" onKeyDown={event => {
-          if (event.key === 'Escape') {
-            event.currentTarget.open = false
-            event.currentTarget.querySelector('summary')?.focus()
-          }
-        }}>
+        <details className="filter-menu" ref={filterMenu}>
           <summary className="button"><ListFilter aria-hidden />Filters</summary>
           <div className="filter-options">
             <label>Case status
@@ -113,7 +111,9 @@ export function Queue() {
       )}
       {data.data?.items.length === 0 && !data.isPlaceholderData && !filtersApplied && atFirstPage && simulator.data?.state !== 'running' &&
         <div className="queue-empty-action"><Button onClick={openSimulator}>Open simulator</Button></div>}
-      {!!data.data?.items.length && <div className="table-scroll" role="region" tabIndex={0} aria-label="Case rows">
+      {!!data.data?.items.length && (
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the scrolling region needs keyboard access.
+        <section className="table-scroll" tabIndex={0} aria-label="Case rows">
         <table className="case-table">
           <thead><tr>
             <th scope="col">Case / transaction</th>
@@ -129,7 +129,11 @@ export function Queue() {
             })}
           </tr></thead>
           <tbody>{data.data.items.map(row => <tr key={row.case_id}>
-            <td><Link className="mono" to={`/cases/${row.case_id}`} state={{ queue: location.search }} aria-label={`Open case ${short(row.case_id)}, transaction ${row.source_sequence}`}>{short(row.case_id)}</Link>
+            <td><Link className="mono" to={`/cases/${row.case_id}`} onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              void navigate(`/cases/${row.case_id}`, { state: { queue: window.location.search } })
+            }} aria-label={`Open case ${short(row.case_id)}, transaction ${row.source_sequence}`}>{short(row.case_id)}</Link>
               <small className="mono muted">TX-{row.source_sequence}</small></td>
             <td><Status value={row.disposition || row.status} /></td>
             <td className="numeric mono">{percent(row.score, 2)}</td>
@@ -139,12 +143,12 @@ export function Queue() {
             <td className="muted nowrap">{timestamp(row.occurred_at)}</td>
           </tr>)}</tbody>
         </table>
-      </div>}
+      </section>)}
       {data.data && (data.data.next_cursor || !atFirstPage || !!data.data.items.length) && <footer className="table-footer">
-        <span role="status">{data.data.items.length} {data.data.items.length === 1 ? 'case' : 'cases'} shown</span>
+        <output>{data.data.items.length} {data.data.items.length === 1 ? 'case' : 'cases'} shown</output>
         <div className="button-row">
           {!atFirstPage && <Button size="small" icon={<ArrowLeft />} onClick={() => change({ after: '' })}>First page</Button>}
-          <Button size="small" disabled={!data.data.next_cursor || data.isPlaceholderData}
+          <Button size="small" disabled={!data.data.next_cursor || refreshing}
             onClick={() => change({ after: data.data?.next_cursor || '' })}>Next page<ArrowRight aria-hidden /></Button>
         </div>
       </footer>}

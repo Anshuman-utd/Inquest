@@ -35,8 +35,9 @@ function Comparison({ attempt }: { attempt?: Attempt }) {
 export function Explorer() {
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState(params.get('q') || '')
-  const [cursor, setCursor] = useState<number | null>(null)
-  const [selected, select] = useState<number | null>(null)
+  const [position, setPosition] = useState<{ history: string; cursor: number | null; selected: number | null }>({
+    history: '', cursor: null, selected: null,
+  })
   const [inline, setInline] = useState(() => matchMedia('(max-width: 850px)').matches)
   useEffect(() => {
     const media = matchMedia('(max-width: 850px)')
@@ -46,6 +47,9 @@ export function Explorer() {
   }, [])
   const customer = params.get('customer')
   const through = params.get('through')
+  const historyKey = JSON.stringify([customer, through])
+  const cursor = position.history === historyKey ? position.cursor : null
+  const selected = position.history === historyKey ? position.selected : null
   const historyParams = new URLSearchParams()
   if (cursor) historyParams.set('before', String(cursor))
   if (through) historyParams.set('through', through)
@@ -63,10 +67,6 @@ export function Explorer() {
     ),
     enabled: !!customer, placeholderData: keepPreviousData,
   })
-  useEffect(() => {
-    setCursor(null)
-    select(null)
-  }, [customer, through])
   const history = timeline.data?.customer.id === customer ? timeline.data : undefined
   const current = history?.items.find(item => item.source_sequence === selected)
 
@@ -81,7 +81,7 @@ export function Explorer() {
       </div>
       {query && suggestions.isPending && <Loading text="Searching customers…" />}
       {suggestions.error && <Failure error={suggestions.error} retry={() => void suggestions.refetch()} />}
-      {query && suggestions.data?.length === 0 && <p className="muted" role="status">No matching synthetic customers.</p>}
+      {query && suggestions.data?.length === 0 && <output className="muted search-result-status">No matching synthetic customers.</output>}
       {query && !!suggestions.data?.length && <ul className="customers" aria-label="Matching customers">
         {suggestions.data.map(item => <li key={item.id}>
           <Button variant="ghost" className={item.id === customer ? 'selected' : ''} aria-pressed={item.id === customer}
@@ -104,7 +104,8 @@ export function Explorer() {
         <ol className="attempts">
           {history.items.map(item => <li className="attempt-row" key={item.source_sequence}>
             <button type="button" className="attempt" aria-pressed={selected === item.source_sequence}
-              onClick={() => select(item.source_sequence)}>
+              aria-label={`Compare ${item.merchant}, transaction ${item.source_sequence}`}
+              onClick={() => setPosition({ history: historyKey, cursor, selected: item.source_sequence })}>
               <div><strong>{item.merchant}</strong><small className="muted mono">TX-{item.source_sequence} · {timestamp(item.occurred_at)}</small></div>
               <div><span>{item.city || 'Remote'} · {item.channel.toUpperCase()}</span><small className="muted">{item.device_id} · {human(item.flow)}</small></div>
               <div className="attempt-amount"><strong className="mono">{amount(item.amount_minor, item.currency)}</strong>
@@ -119,9 +120,9 @@ export function Explorer() {
           </li>)}
         </ol>
         {(history.next_cursor || cursor) && <div className="button-row history-footer">
-          {cursor && <Button onClick={() => { setCursor(null); select(null) }}>Latest attempts</Button>}
+          {cursor && <Button onClick={() => { setPosition({ history: historyKey, cursor: null, selected: null }) }}>Latest attempts</Button>}
           <Button disabled={!history.next_cursor || timeline.isPlaceholderData}
-            onClick={() => { setCursor(history.next_cursor); select(null) }}>Older attempts<ArrowDown aria-hidden /></Button>
+            onClick={() => { setPosition({ history: historyKey, cursor: history.next_cursor, selected: null }) }}>Older attempts<ArrowDown aria-hidden /></Button>
         </div>}
       </section>
       {!inline && <Comparison attempt={current} />}
