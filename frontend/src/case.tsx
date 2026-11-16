@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ClipboardCheck, ChevronRight, FlaskConical, Play, Wrench } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ClipboardCheck, ChevronRight, FlaskConical, Play, Wrench } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { ApiError, post, request, type Schema } from './api'
 import { useInvestigationStream, type Entry } from './stream'
-import { amount, Empty, Failure, human, Loading, PageHeading, percent, short, Status, timestamp } from './ui'
+import { amount, Button, ConfirmDialog, Empty, Failure, human, PageHeading, percent, short, Skeleton, Status, timestamp } from './ui'
 
 type Detail = Schema['CaseDetail']
 type DecisionPayload = Schema['DecisionRequest']
@@ -14,7 +14,7 @@ function Summary({ data }: { data: Detail }) {
     <h2>Transaction</h2>
     <dl className="facts-grid">
       <div><dt>Transaction</dt><dd className="mono">TX-{data.source_sequence}</dd></div>
-      <div><dt>Amount</dt><dd>{amount(data.amount_minor, data.currency)}</dd></div>
+      <div><dt>Amount</dt><dd className="mono">{amount(data.amount_minor, data.currency)}</dd></div>
       <div><dt>Customer</dt><dd><Link to={`/explorer?customer=${encodeURIComponent(data.customer_id)}&through=${data.source_sequence}`}>{data.customer}</Link></dd></div>
       <div><dt>Merchant</dt><dd>{data.merchant}</dd></div>
       <div><dt>Channel</dt><dd>{data.channel.toUpperCase()} · {human(data.flow)}</dd></div>
@@ -29,11 +29,12 @@ function Summary({ data }: { data: Detail }) {
 
 function Contributions({ data }: { data: Detail }) {
   const maximum = Math.max(...data.contributions.map(row => Math.abs(row.raw_margin_delta)), 0.001)
-  return <section className="panel section">
+  return <section className="panel section risk-panel">
     <div className="section-heading">
-      <div><h2>Risk score</h2><p>{percent(data.threshold, 3)} alert threshold</p></div>
+      <div><h2>Risk score</h2><p>Alert threshold {percent(data.threshold, 3)}</p></div>
       <strong className="score mono">{percent(data.score, 2)}</strong>
     </div>
+    <div className="contribution-label"><h3>Top risk drivers</h3><span>Signed model contribution</span></div>
     <ul className="contributions" aria-label="Top model feature contributions">
       {data.contributions.map(row => <li key={row.feature}>
         <span>{human(row.feature)}</span>
@@ -43,7 +44,7 @@ function Contributions({ data }: { data: Detail }) {
         <span className="mono numeric">{row.raw_margin_delta >= 0 ? '+' : ''}{row.raw_margin_delta.toFixed(3)}</span>
       </li>)}
     </ul>
-    <p className="muted caption">Signed TreeSHAP contributions in raw-margin units · <span className="mono">{data.model_version}</span></p>
+    <p className="muted caption">TreeSHAP raw-margin units · <span className="mono">{data.model_version}</span></p>
   </section>
 }
 
@@ -52,11 +53,16 @@ function decisionKey(previous: { body: string; key: string } | null, body: Decis
   return previous?.body === serialized ? previous : { body: serialized, key: crypto.randomUUID() }
 }
 
-function DecisionForm({ data, current, onRecorded }: {
-  data: Detail; current: Schema['Snapshot']; onRecorded: () => void
+function DecisionForm({ data, current, recommendation, onRecorded }: {
+  data: Detail; current: Schema['Snapshot']; recommendation: Schema['Report']['recommended_action']; onRecorded: () => void
 }) {
   const [operation, choose] = useState<DecisionPayload['operation']>('approve')
-  const [action, setAction] = useState<NonNullable<DecisionPayload['action']>>('block')
+  const [requestedAction, setAction] = useState<NonNullable<DecisionPayload['action']>>('block')
+  const allowedActions = (['block', 'release', 'escalate'] as const).filter(value => value !== recommendation)
+  const action = allowedActions.includes(requestedAction) ? requestedAction : allowedActions[0]
+  const [confirmation, setConfirmation] = useState<DecisionPayload | null>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const outcome = operation === 'approve' ? recommendation : operation === 'escalate' ? 'escalate' : action
   const [note, setNote] = useState('')
   const idempotency = useRef<{ body: string; key: string } | null>(null)
   const cache = useQueryClient()
@@ -65,7 +71,7 @@ function DecisionForm({ data, current, onRecorded }: {
       idempotency.current = decisionKey(idempotency.current, payload)
       return post<Schema['Recorded']>(`/investigations/${data.investigation_id}/decision`, payload, idempotency.current.key)
     },
-    onSuccess: onRecorded,
+    onSuccess: () => { dialog.current?.close(); setConfirmation(null); onRecorded() },
     onError: error => {
       if (error instanceof ApiError && error.status === 409) {
         void cache.invalidateQueries({ queryKey: ['case', data.case_id] })
@@ -76,38 +82,55 @@ function DecisionForm({ data, current, onRecorded }: {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    mutation.mutate({
+    mutation.reset()
+    setConfirmation({
       operation, expected_case_version: current.case_version, note,
       action: operation === 'override' ? action : undefined,
     })
+    dialog.current?.showModal()
   }
 
-  return <form className="decision-form" onSubmit={submit}>
+  function dismiss() {
+    dialog.current?.close()
+    setConfirmation(null)
+    mutation.reset()
+  }
+
+  const choices = [
+    ['approve', 'Approve recommendation', `Accept the agent’s recommendation to ${recommendation}.`],
+    ['override', 'Override', 'Record a different disposition.'],
+    ['escalate', 'Escalate', 'Mark this case for further review.'],
+  ] as const
+
+  return <form className="decision-form" onSubmit={submit} aria-labelledby="analyst-decision">
     <fieldset disabled={mutation.isPending}>
-      <legend>Analyst decision</legend>
+      <legend id="analyst-decision" tabIndex={-1}>Analyst decision</legend>
       <div className="decision-options">
-        {(['approve', 'override', 'escalate'] as const).map(value => <label key={value}>
-          <input type="radio" name="decision" checked={operation === value} onChange={() => choose(value)} />{human(value)}
+        {choices.map(([value, label, description]) => <label key={value}>
+          <input type="radio" name="decision" checked={operation === value} onChange={() => choose(value)} aria-label={label} />
+          <span><strong>{label}</strong><small>{description}</small></span>
         </label>)}
       </div>
       {operation === 'override' && <label className="stack-label">Override disposition
         <select value={action} onChange={event => setAction(event.target.value as typeof action)}>
-          <option value="block">Block</option><option value="release">Release</option><option value="escalate">Escalate</option>
+          {allowedActions.map(value => <option key={value} value={value}>{human(value)}</option>)}
         </select>
       </label>}
       <label className="stack-label">Analyst notes <span className="muted">(optional)</span>
         <textarea rows={3} value={note} maxLength={1000} onChange={event => setNote(event.target.value)} aria-describedby="synthetic-disclaimer" />
       </label>
       <p id="synthetic-disclaimer" className="synthetic-notice">Synthetic data only. Don’t enter real personal data.</p>
-      <button className="button primary" type="submit"><ClipboardCheck size={16} aria-hidden />
-        {mutation.isPending ? 'Saving…' : 'Record decision'}
-      </button>
+      <div className="button-row decision-actions">
+        <Button variant="primary" type="submit" icon={<ClipboardCheck />}>Record decision</Button>
+      </div>
     </fieldset>
-    {mutation.error && <Failure error={
-      mutation.error instanceof ApiError && mutation.error.status === 409
-        ? new Error('The case changed while you were reviewing it. The latest status is loading.')
-        : mutation.error
-    } />}
+    <ConfirmDialog dialogRef={dialog} title="Confirm analyst decision"
+      description={`This records ${outcome} as the disposition for this synthetic transaction.`}
+      confirm={`Confirm ${outcome}`} caution={outcome === 'block'} busy={mutation.isPending}
+      onCancel={dismiss} onConfirm={() => { if (confirmation && !mutation.isPending) mutation.mutate(confirmation) }}
+      error={mutation.error instanceof ApiError && mutation.error.status === 409
+        ? new Error('The case changed while you were reviewing it. Loading the latest status.')
+        : mutation.error} />
   </form>
 }
 
@@ -150,7 +173,7 @@ function Timeline({ entries, connection, register }: {
     ? [[entry.payload.call_sequence, entry] as const] : []))
   const observed = new Set(entries.flatMap(entry => entry.kind === 'tool_observed' ? [entry.payload.result.call_sequence] : []))
   return <section className="panel section timeline">
-    <div className="section-heading"><h2>Investigation timeline</h2><span role="status" className="muted">{streamLabels[connection]}</span></div>
+    <div className="section-heading"><h2>Investigation timeline</h2><span role="status" className="stream-status" data-connection={connection}>{streamLabels[connection]}</span></div>
     {!entries.length && <p className="muted">Waiting for investigation events.</p>}
     <ol>
       {entries.map(entry => {
@@ -202,7 +225,7 @@ function Investigation({ data, run }: { data: Detail; run: string }) {
     const target = evidence.current.get(id)
     if (target) {
       target.open = true
-      target.querySelector('summary')?.focus()
+      target.querySelector('summary')?.focus({ preventScroll: true })
       target.scrollIntoView({ block: 'nearest' })
     }
   }
@@ -216,7 +239,7 @@ function Investigation({ data, run }: { data: Detail; run: string }) {
     <Timeline {...stream} register={register} />
     <section className="panel section report">
       <div className="section-heading">
-        <h2>Investigation report</h2>
+        <h2>Agent recommendation</h2>
         {current && <span className="tag">{human(current.mode)} mode</span>}
       </div>
       {snapshot.error && <Failure error={snapshot.error} retry={() => void snapshot.refetch()} />}
@@ -244,7 +267,7 @@ function Investigation({ data, run }: { data: Detail; run: string }) {
         </div>}
       </>}
       {data.decision && <RecordedDecision data={data.decision} />}
-      {report && current?.status === 'review' && !data.decision && <DecisionForm data={data} current={current} onRecorded={onRecorded} />}
+      {report && current?.status === 'review' && !data.decision && <DecisionForm data={data} current={current} recommendation={report.recommended_action} onRecorded={onRecorded} />}
     </section>
   </div>
 }
@@ -277,20 +300,21 @@ export function CasePage() {
   const data = query.data
 
   return <>
-    <Link className="back-link" to={`/${location.state?.queue || ''}`}><ArrowLeft size={15} aria-hidden />Case Queue</Link>
-    {query.isPending && <Loading text="Loading case…" />}
+    <Link className="back-link" to={`/${location.state?.queue || ''}`}><ArrowLeft size={15} aria-hidden />Back to case queue</Link>
+    {query.isPending && <div className="panel"><Skeleton text="Loading case…" /></div>}
     {query.error && <Failure error={query.error} retry={() => void query.refetch()} />}
     {data && <>
       <PageHeading title={`Case ${short(data.case_id)}`} description={`TX-${data.source_sequence} · ${data.merchant}`}>
-        <Status value={data.disposition || data.status} />
+        <div className="button-row case-heading-actions">
+          <Status value={data.disposition || data.status} />
+          {data.status === 'queued' && <Button variant="primary" icon={<Play />} onClick={() => start.mutate()} busy={start.isPending}>Start investigation</Button>}
+          {data.status === 'review' && !data.decision && <Button variant="link" icon={<ArrowDown />} onClick={() => {
+            document.getElementById('analyst-decision')?.focus()
+          }}>Review decision</Button>}
+        </div>
       </PageHeading>
+      {start.error && <Failure error={start.error} />}
       <div className="case-columns top-case"><Summary data={data} /><Contributions data={data} /></div>
-      {data.status === 'queued' && <div className="investigation-start">
-        <button className="button primary" type="button" onClick={() => start.mutate()} disabled={start.isPending}>
-          <Play size={16} aria-hidden />{start.isPending ? 'Starting…' : 'Start investigation'}
-        </button>
-        {start.error && <Failure error={start.error} />}
-      </div>}
       {data.investigation_id
         ? <Investigation key={data.investigation_id} data={data} run={data.investigation_id} />
         : <section className="panel section idle-investigation"><FlaskConical size={22} aria-hidden />

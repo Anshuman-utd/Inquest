@@ -529,3 +529,26 @@ span.filter-chip { padding: 6px 8px; font-size: 13px; }
   .queue-summary > div:nth-child(3) { border-left: 0; }
   .queue .search-field { flex-basis: 140px; }
 }
+
+.case-heading-actions { justify-content: flex-end; }
+.case-columns { gap: 16px; }
+.top-case { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.risk-panel .contribution-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }
+.contribution-label span { font-size: 13px; color: var(--muted); }
+.contribution-track .positive { background: var(--chart); }
+.contribution-track .negative { background: var(--chart-negative); opacity: 1; }
+.stream-status { color: var(--muted); border: 1px solid var(--border); padding: 3px 7px; border-radius: var(--radius-control); font-size: 13px; white-space: nowrap; }
+.stream-status[data-connection="reconnecting"] { background: var(--review-fill); color: var(--review); border-color: transparent; }
+.timeline summary:hover { background: var(--soft); }
+.timeline summary, .timeline-entry { border-radius: var(--radius-control); }
+.timeline .evidence-body pre { max-height: 340px; overflow: auto; }
+.report .report-summary { padding: 10px; background: var(--rail); border-radius: var(--radius-control); }
+.report .evidence-list .citation { background: var(--accent-fill); border-radius: var(--radius-control); padding: 0 6px; }
+.decision-form legend { font-size: 16px; }
+.decision-form .decision-options { display: grid; gap: 6px; margin-top: 10px; }
+.decision-form .decision-options label { padding: 7px 9px; gap: 8px; border-radius: var(--radius-control); border: 1px solid var(--border); }
+.decision-form .decision-options label:has(input:checked) { border-color: var(--accent); background: var(--accent-fill); }
+.decision-options small { color: var(--muted); }
+.decision-actions, .dialog-actions { justify-content: flex-end; }
+.recorded-section .recorded-note { background: var(--rail); }
+@media (max-width: 800px) { .top-case { grid-template-columns: minmax(0, 1fr); } }

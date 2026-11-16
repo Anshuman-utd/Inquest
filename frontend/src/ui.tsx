@@ -1,7 +1,7 @@
 import {
   AlertCircle, ArrowUpRight, CircleCheck, CircleHelp, Clock3, LoaderCircle, ShieldAlert, ShieldCheck,
 } from 'lucide-react'
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import { useId, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react'
 import { Link } from 'react-router-dom'
 
 export const number = new Intl.NumberFormat('en-IN')
@@ -66,6 +66,26 @@ export function Button({ variant = 'secondary', size = 'medium', icon, busy = fa
     </span>}
     {children}
   </button>
+}
+
+export function ConfirmDialog({ dialogRef, title, description, confirm, onConfirm, onCancel, busy, caution, error }: {
+  dialogRef: Ref<HTMLDialogElement>; title: string; description: string; confirm: string
+  onConfirm: () => void; onCancel: () => void; busy: boolean; caution?: boolean; error?: Error | null
+}) {
+  const titleId = useId()
+  const descriptionId = useId()
+  return <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => {
+    if (busy) event.preventDefault()
+    else onCancel()
+  }}>
+    <h2 id={titleId}>{title}</h2>
+    <p id={descriptionId}>{description}</p>
+    {error && <Failure error={error} />}
+    <div className="button-row dialog-actions">
+      <Button autoFocus disabled={busy} onClick={onCancel}>Cancel</Button>
+      <Button variant={caution ? 'caution' : 'primary'} busy={busy} onClick={onConfirm}>{confirm}</Button>
+    </div>
+  </dialog>
 }
 
 export function Skeleton({ text, className = '' }: { text: string; className?: string }) {
