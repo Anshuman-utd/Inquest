@@ -92,6 +92,12 @@ def test_replay_queue_and_explorer_respect_workspace(tokens: tuple[str, str]) ->
         history = client.get(f"/api/v1/customers/{customer}/transactions", headers=first)
         assert history.status_code == 200, history.text
         assert history.json()["customer"]["id"] == customer
+        route = f"/api/v1/customers/{customer}/transactions"
+        focal = first_case["source_sequence"]
+        mine = client.get(route, params={"through": focal}, headers=first).json()["items"]
+        theirs = client.get(route, params={"through": focal}, headers=second).json()["items"]
+        assert mine[0]["source_sequence"] == focal
+        assert mine[0]["flagged"] and not theirs[0]["flagged"]
         paused = client.post(
             cmd, json={"command": "pause", "expected_replay_id": replay_id}, headers=first
         ).json()

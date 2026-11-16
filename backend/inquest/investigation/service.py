@@ -180,8 +180,9 @@ class Investigations:
             if data["note"]:
                 connection.execute(
                     text("""
-                    INSERT INTO operations.notes (workspace_id, case_id, analyst_id, body)
-                    VALUES (:workspace, :case, :analyst, :note)
+                    INSERT INTO operations.notes
+                        (workspace_id, case_id, analyst_id, body, decision_id)
+                    VALUES (:workspace, :case, :analyst, :note, :decision)
                 """),
                     data,
                 )

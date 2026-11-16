@@ -142,12 +142,15 @@ def history(
     simulator: Simulator,
     customer_id: str,
     before: int | None,
+    through: int | None,
     limit: int,
 ) -> HistoryPage:
     params = {
         "dataset": simulator.fixture.dataset_id,
         "id": customer_id,
         "before": before,
+        "through": through,
+        "workspace": identity[0],
         "limit": limit + 1,
     }
     customer = (
@@ -162,14 +165,18 @@ def history(
     )
     if customer is None:
         raise HTTPException(status_code=404, detail="Synthetic customer unavailable")
-    replay = simulator.current(db, identity[0])
     rows = (
         db.execute(
             text(f"""
-            SELECT {TRANSACTION}, t.city_id, g.latitude AS lat, g.longitude AS lon
+            SELECT {TRANSACTION}, t.city_id, g.latitude AS lat, g.longitude AS lon,
+                EXISTS (
+                    SELECT 1 FROM operations.cases c
+                    WHERE c.workspace_id = :workspace
+                        AND (c.dataset_id, c.source_sequence) = (t.dataset_id, t.source_sequence)
+                ) AS flagged
             FROM fixture.transactions t {TRANSACTION_JOINS}
             WHERE t.dataset_id = :dataset AND t.customer_id = :id
-                AND t.source_sequence <= coalesce(:before, 9223372036854775807)
+                AND t.source_sequence <= least(:before, :through, 9223372036854775807)
             ORDER BY t.source_sequence DESC LIMIT :limit
         """),
             params,
@@ -188,14 +195,7 @@ def history(
                 distance_km=round(distance_km(point(prev), point(row)), 1),
                 elapsed_seconds=(row["occurred_at"] - prev["occurred_at"]).total_seconds(),
             )
-        flagged = (
-            replay is not None
-            and row["source_sequence"] <= replay.cursor
-            and row["source_sequence"] in simulator.flagged
-        )
-        items.append(
-            CustomerAttempt.model_validate(dict(row) | {"flagged": flagged, "travel": travel})
-        )
+        items.append(CustomerAttempt.model_validate(dict(row) | {"travel": travel}))
     return HistoryPage(
         customer=Customer.model_validate(customer),
         items=items,
@@ -297,10 +297,11 @@ def console_router(simulator: Simulator, actor: Actor) -> APIRouter:
             decision = (
                 db.execute(
                     text("""
-                    SELECT id, analyst_id, operation, disposition, created_at,
-                        request_payload ->> 'note' AS note
-                    FROM operations.decisions
-                    WHERE workspace_id = :workspace AND investigation_id = :run
+                    SELECT d.id, d.analyst_id, d.operation, d.disposition, d.created_at,
+                        n.body AS note
+                    FROM operations.decisions d LEFT JOIN operations.notes n
+                        ON (n.workspace_id, n.decision_id) = (d.workspace_id, d.id)
+                    WHERE d.workspace_id = :workspace AND d.investigation_id = :run
                 """),
                     {"workspace": workspace, "run": row["investigation_id"]},
                 )
@@ -338,11 +339,12 @@ def console_router(simulator: Simulator, actor: Actor) -> APIRouter:
         response: Response,
         identity: Annotated[Identity, Depends(actor)],
         before: Annotated[int | None, Query(ge=1, le=2**63 - 1)] = None,
+        through: Annotated[int | None, Query(ge=1, le=2**63 - 1)] = None,
         limit: Annotated[int, Query(ge=1, le=100)] = 30,
     ) -> HistoryPage:
         response.headers["Cache-Control"] = "no-store"
         with simulator.tenants.transaction(workspace_id=identity[0], analyst_id=identity[1]) as db:
-            return history(db, identity, simulator, customer_id, before, limit)
+            return history(db, identity, simulator, customer_id, before, through, limit)
 
     @router.get("/simulator", tags=["simulator"])
     def simulator_status(

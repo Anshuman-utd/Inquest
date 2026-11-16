@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 from inquest.auth.api import authenticate
+from inquest.console.api import console_router
 from inquest.db.tenant import TenantDatabase
 from inquest.investigation.api import investigation_router
 from inquest.investigation.contracts import ToolScope
@@ -22,6 +23,7 @@ from inquest.investigation.replay import Recordings
 from inquest.investigation.runtime import Conflict, DecisionRequest
 from inquest.investigation.service import Investigations
 from inquest.investigation.tools import InvestigationTools
+from inquest.main import simulator
 from inquest.settings import Settings
 
 requires_db = pytest.mark.skipif(
@@ -119,6 +121,7 @@ def test_api_replay_checkpoint_and_resume_through_fresh_worker(demo: DemoSession
             runtime, b"test-secret", authenticate(runtime.auth, Settings().web_origin)
         )
     )
+    app.include_router(console_router(simulator, authenticate(runtime.auth, Settings().web_origin)))
     with TestClient(app) as client:
         path = f"/api/v1/cases/{demo.case_id}/investigations"
         assert client.post(path, headers={"Idempotency-Key": "start-test"}).status_code == 401
@@ -141,7 +144,11 @@ def test_api_replay_checkpoint_and_resume_through_fresh_worker(demo: DemoSession
         assert "event: report_ready" in resumed.text and "event: tool_observed" not in resumed.text
 
         decision_headers = headers | {"Idempotency-Key": "decision-test"}
-        body = {"operation": "approve", "expected_case_version": row["case_version"]}
+        body = {
+            "operation": "approve",
+            "expected_case_version": row["case_version"],
+            "note": "Synthetic evidence checked",
+        }
         assert (
             client.post(
                 f"{route}/decision",
@@ -154,6 +161,8 @@ def test_api_replay_checkpoint_and_resume_through_fresh_worker(demo: DemoSession
         assert recorded.status_code == 202, recorded.text
         assert service().work_once()
         assert client.get(route, headers=headers).json()["status"] == "complete"
+        saved = client.get(f"/api/v1/cases/{demo.case_id}", headers=headers).json()
+        assert saved["decision"]["note"] == "Synthetic evidence checked"
         assert (
             client.post(f"{route}/decision", headers=decision_headers, json=body).json()
             == recorded.json()

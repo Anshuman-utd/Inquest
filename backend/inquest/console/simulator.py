@@ -42,7 +42,6 @@ class Simulator:
             for alert in fixture.alerts
         ):
             raise ValueError("Replay alerts must be unique, ordered and above the scorer threshold")
-        self.flagged = frozenset(self.sequences)
 
     @staticmethod
     def current(connection: Connection, workspace: UUID) -> Row[tuple[UUID, str, int]] | None:
