@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ArrowDown, MapPin, Search } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Flag, MapPin, Search } from 'lucide-react'
 import { useDeferredValue, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { request, type Schema } from './api'
-import { amount, Empty, Failure, human, Loading, number, PageHeading, timestamp } from './ui'
+import { amount, Button, Empty, Failure, human, Loading, number, PageHeading, Skeleton, timestamp } from './ui'
 
 type Attempt = Schema['CustomerAttempt']
 
@@ -37,6 +37,13 @@ export function Explorer() {
   const [search, setSearch] = useState(params.get('q') || '')
   const [cursor, setCursor] = useState<number | null>(null)
   const [selected, select] = useState<number | null>(null)
+  const [inline, setInline] = useState(() => matchMedia('(max-width: 850px)').matches)
+  useEffect(() => {
+    const media = matchMedia('(max-width: 850px)')
+    const update = () => setInline(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
   const customer = params.get('customer')
   const through = params.get('through')
   const historyParams = new URLSearchParams()
@@ -64,27 +71,28 @@ export function Explorer() {
   const current = history?.items.find(item => item.source_sequence === selected)
 
   return <>
-    <PageHeading title="Transaction Explorer" description="Search the shared synthetic dataset by customer ID or alias." />
-    <section className="panel section explorer-search">
-      <label className="search-field">
+    <PageHeading title="Transaction explorer" description="Review synthetic customer activity and compare payment locations." />
+    <section className="panel section explorer-search" aria-label="Find a customer">
+      <label className="field-caption" htmlFor="customer-search">Customer ID or alias</label>
+      <div className="search-field">
         <Search size={16} aria-hidden />
-        <input aria-label="Search synthetic customers" placeholder="Customer ID or alias" value={search}
+        <input id="customer-search" aria-label="Search synthetic customers" placeholder="Search customer records" value={search}
           maxLength={100} onChange={event => setSearch(event.target.value)} />
-      </label>
+      </div>
       {query && suggestions.isPending && <Loading text="Searching customers…" />}
       {suggestions.error && <Failure error={suggestions.error} retry={() => void suggestions.refetch()} />}
-      {query && suggestions.data?.length === 0 && <p className="muted">No matching synthetic customers.</p>}
+      {query && suggestions.data?.length === 0 && <p className="muted" role="status">No matching synthetic customers.</p>}
       {query && !!suggestions.data?.length && <ul className="customers" aria-label="Matching customers">
         {suggestions.data.map(item => <li key={item.id}>
-          <button className={`button ${item.id === customer ? 'selected' : ''}`} type="button" aria-pressed={item.id === customer}
-            onClick={() => { setSearch(''); setParams({ customer: item.id }) }}>
+          <Button variant="ghost" className={item.id === customer ? 'selected' : ''} aria-pressed={item.id === customer}
+            onClick={() => { setSearch(''); setParams({ customer: item.id }); document.getElementById('customer-search')?.focus() }}>
             <span>{item.alias}</span><span className="mono muted">{item.id}</span>
-          </button>
+          </Button>
         </li>)}
       </ul>}
     </section>
-    {!customer && !query && <Empty title="Select a synthetic customer">Open a customer from the search results or a case detail.</Empty>}
-    {customer && timeline.isPending && <Loading text="Loading transactions…" />}
+    {!customer && !query && <div className="panel"><Empty title="Select a synthetic customer">Open a customer from the search results or a case detail.</Empty></div>}
+    {customer && timeline.isPending && <div className="panel"><Skeleton text="Loading transactions…" /></div>}
     {timeline.error && <Failure error={timeline.error} retry={() => void timeline.refetch()} />}
     {history && <div className="explorer-grid">
       <section className="panel section history">
@@ -94,24 +102,29 @@ export function Explorer() {
         </div>
         {!history.items.length && <Empty title="No transaction history" />}
         <ol className="attempts">
-          {history.items.map(item => <li key={item.source_sequence}>
+          {history.items.map(item => <li className="attempt-row" key={item.source_sequence}>
             <button type="button" className="attempt" aria-pressed={selected === item.source_sequence}
               onClick={() => select(item.source_sequence)}>
               <div><strong>{item.merchant}</strong><small className="muted mono">TX-{item.source_sequence} · {timestamp(item.occurred_at)}</small></div>
               <div><span>{item.city || 'Remote'} · {item.channel.toUpperCase()}</span><small className="muted">{item.device_id} · {human(item.flow)}</small></div>
-              <div className="attempt-amount"><strong>{amount(item.amount_minor, item.currency)}</strong>
-                <small className="muted">{item.flagged ? 'Alerted · ' : ''}{item.declined ? 'Declined' : 'Accepted'}</small>
+              <div className="attempt-amount"><strong className="mono">{amount(item.amount_minor, item.currency)}</strong>
+                <small className="muted">{item.declined ? 'Declined' : 'Accepted'}</small>
               </div>
             </button>
+            {item.flagged && <div className="attempt-alert">
+              <span><Flag size={13} aria-hidden />Alerted</span>
+              <Link to={`/?q=TX-${item.source_sequence}`}>View matching cases <ArrowUpRight size={13} aria-hidden /></Link>
+            </div>}
+            {inline && selected === item.source_sequence && <Comparison attempt={item} />}
           </li>)}
         </ol>
         {(history.next_cursor || cursor) && <div className="button-row history-footer">
-          {cursor && <button className="button" type="button" onClick={() => { setCursor(null); select(null) }}>Latest attempts</button>}
-          <button className="button" type="button" disabled={!history.next_cursor || timeline.isPlaceholderData}
-            onClick={() => { setCursor(history.next_cursor); select(null) }}>Older attempts<ArrowDown size={15} aria-hidden /></button>
+          {cursor && <Button onClick={() => { setCursor(null); select(null) }}>Latest attempts</Button>}
+          <Button disabled={!history.next_cursor || timeline.isPlaceholderData}
+            onClick={() => { setCursor(history.next_cursor); select(null) }}>Older attempts<ArrowDown aria-hidden /></Button>
         </div>}
       </section>
-      <Comparison attempt={current} />
+      {!inline && <Comparison attempt={current} />}
     </div>}
     {customer && <Link className="back-link explorer-back" to="/">Return to Case Queue</Link>}
   </>
