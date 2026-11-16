@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { ChartNoAxesCombined, ClipboardList, Database, LogIn, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
+import { ChartNoAxesCombined, ClipboardList, Database, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
@@ -15,6 +15,8 @@ import { Brand, Button, Failure, Loading, Missing, short } from './ui'
 import '@fontsource-variable/geist'
 import '@fontsource/ibm-plex-mono/400.css'
 import './styles.css'
+import githubMark from './assets/github.svg'
+import googleMark from './assets/google.svg'
 
 const client = new QueryClient({
   defaultOptions: {
@@ -77,22 +79,23 @@ function Auth({ signup = false }: { signup?: boolean }) {
   return <div className="auth-layout">
     <header className="auth-header"><Brand /><ThemeControl /></header>
     <main className="auth-main">
-      <div className="auth-panel">
-        <h1>{signup ? 'Create your workspace' : 'Sign in to Inquest'}</h1>
-        <p>Your first sign-in creates a private analyst workspace for investigating synthetic payments.</p>
+      <div className="auth-panel" aria-labelledby="auth-title">
+        <h1 id="auth-title">{signup ? 'Create your workspace' : 'Sign in to Inquest'}</h1>
+        <p>{signup ? 'Your first sign-in creates a private workspace for investigating synthetic payments.' : 'Access your case queue, investigations, and analyst decisions.'}</p>
         {error && <div role="alert" className="auth-alert">{error}</div>}
         {available.error && <Failure error={available.error} retry={() => void available.refetch()} />}
         {available.isPending && <Loading text="Loading sign-in options…" />}
         <div className="auth-buttons">
-          {(['github', 'google'] as const).map(provider => <form key={provider} method="post" action={`/api/v1/auth/${provider}/start?intent=${intent}`}>
-            <button className="button" disabled={!available.data?.[provider]}>
-              <LogIn size={17} aria-hidden />Continue with {provider === 'github' ? 'GitHub' : 'Google'}
-            </button>
+          {([{ key: 'github', label: 'GitHub', mark: githubMark }, { key: 'google', label: 'Google', mark: googleMark }] as const).map(provider => <form key={provider.key} method="post" action={`/api/v1/auth/${provider.key}/start?intent=${intent}`}>
+            <Button type="submit" size="large" disabled={!available.data?.[provider.key]}
+              icon={<img className={`provider-mark ${provider.key}`} src={provider.mark} alt="" />}>
+              Continue with {provider.label}
+            </Button>
+            {available.data && !available.data[provider.key] && <p className="provider-unavailable">{provider.label} is currently unavailable.</p>}
           </form>)}
         </div>
-        {available.data && !available.data.github && !available.data.google && <p className="auth-alert">Sign-in is unavailable. Configure an OAuth provider in the API environment.</p>}
         <p className="synthetic-notice">Synthetic data only. Don’t enter real personal data.</p>
-        <p>{signup ? <>Already have an account? <Link to="/login">Sign in</Link></> : <>New to Inquest? <Link to="/signup">Create a workspace</Link></>}</p>
+        <p className="auth-switch">{signup ? <>Already have an account? <Link to="/login">Sign in</Link></> : <>New to Inquest? <Link to="/signup">Create a workspace</Link></>}</p>
       </div>
     </main>
   </div>

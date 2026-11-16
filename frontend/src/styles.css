@@ -428,30 +428,29 @@ dialog p { margin: 8px 0 16px; color: var(--muted); }
 .ablation tbody th { font-weight: 610; }
 .metric-footnote { border-top: 1px solid var(--border); padding: 10px 13px; }
 
-.auth-layout { min-height: 100dvh; }
+.auth-layout { min-height: 100dvh; --auth-edge: clamp(24px, 15vw, 216px); }
 .auth-header {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  min-height: 65px;
-  padding: 12px 32px;
+  min-height: 56px;
+  padding: 8px var(--auth-edge);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.auth-main { padding: clamp(30px, 10vh, 115px) 22px 24px; }
-.auth-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin: 0 auto;
-  width: min(100%, 410px);
-  padding: 24px;
-}
-.auth-panel p { margin: 10px 0 0; color: var(--muted); }
-.auth-buttons { display: grid; gap: 8px; margin-top: 19px; }
-.auth-buttons button { width: 100%; justify-content: flex-start; min-height: 43px; }
-.auth-panel .auth-alert { border-left: 2px solid var(--fraud); color: var(--fraud); padding-left: 9px; margin-top: 12px; }
-.auth-panel .synthetic-notice { margin: 17px 0; }
+.auth-main { padding: clamp(32px, 8vh, 84px) var(--auth-edge) 40px; }
+.auth-panel { width: min(100%, 384px); }
+.auth-panel h1 { font-size: 32px; line-height: 38px; }
+.auth-panel > p { margin-top: 10px; color: var(--muted); }
+.auth-buttons { display: grid; gap: 8px; margin-top: 24px; }
+.auth-buttons .button { width: 100%; justify-content: flex-start; }
+.provider-mark { width: 16px; height: 16px; display: block; object-fit: contain; }
+[data-theme="dark"] .provider-mark.github { filter: invert(1); }
+.provider-unavailable { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.auth-panel .auth-alert { border: 1px solid var(--fraud); border-radius: var(--radius-control); background: var(--fraud-fill); color: var(--fraud); padding: 10px 12px; margin-top: 16px; }
+.auth-panel .state { margin-top: 12px; padding: 10px 0; }
+.auth-panel .synthetic-notice { margin: 20px 0 0; }
+.auth-panel .auth-switch { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--border); }
 
 @media (max-width: 1199px) {
   .workspace { --rail-width: 64px; --gutter: 24px; }
