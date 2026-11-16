@@ -62,7 +62,7 @@ The API exposes workspace-wide search, status, channel, and minimum risk filters
 
 ## Screenshot index
 
-The baseline images are grouped by theme and viewport under [ui-before-after/before](ui-before-after/before/). Each matrix entry is named `<scenario>.png`. Images extend down the page when the content exceeds the viewport. Read the modal and its backdrop in the first viewport of replay-confirmation captures.
+The baseline images are grouped by theme and viewport under [ui-before-after/before](ui-before-after/before/). Each matrix entry is named `<scenario>.png`. Images extend down the page when content exceeds the viewport. Replay-confirmation captures show one viewport so the dialog and its backdrop appear together.
 
 | Area | Captured scenarios | Sample |
 | --- | --- | --- |

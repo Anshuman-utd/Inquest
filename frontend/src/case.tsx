@@ -64,6 +64,11 @@ function DecisionForm({ data, current, recommendation, onRecorded }: {
   const [confirmation, setConfirmation] = useState<DecisionPayload | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const outcome = operation === 'approve' ? recommendation : operation === 'escalate' ? 'escalate' : action
+  const confirmationCopy = {
+    block: { action: 'Confirm block', description: 'This records a block decision for the synthetic transaction.' },
+    release: { action: 'Confirm release', description: 'This records a release decision for the synthetic transaction.' },
+    escalate: { action: 'Confirm escalation', description: 'This marks the synthetic case for further review and records your decision.' },
+  }[outcome]
   const [note, setNote] = useState('')
   const idempotency = useRef<{ body: string; key: string } | null>(null)
   const cache = useQueryClient()
@@ -126,8 +131,8 @@ function DecisionForm({ data, current, recommendation, onRecorded }: {
       </div>
     </fieldset>
     <ConfirmDialog dialogRef={dialog} title="Confirm analyst decision"
-      description={`This records ${outcome} as the disposition for this synthetic transaction.`}
-      confirm={`Confirm ${outcome}`} caution={outcome === 'block'} busy={mutation.isPending}
+      description={confirmationCopy.description}
+      confirm={confirmationCopy.action} caution={outcome === 'block'} busy={mutation.isPending}
       onCancel={dismiss} onConfirm={() => { if (confirmation && !mutation.isPending) mutation.mutate(confirmation) }}
       error={mutation.error instanceof ApiError && mutation.error.status === 409
         ? new Error('The case changed while you were reviewing it. Loading the latest status.')

@@ -257,3 +257,29 @@ test('compact shell keeps page overflow local and honors reduced motion', async 
   await expect(scroll).toBeVisible()
   expect(await scroll.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true)
 })
+
+test('account popover closes with Escape and signs out through the session endpoint', async ({ page }) => {
+  await setup(page)
+  let signedOut = false
+  await page.route('/api/v1/auth/session', route => signedOut
+    ? route.fulfill({ status: 401, json: { detail: 'Authentication required' } })
+    : route.fulfill({ json: { workspace_id: workspaceId, analyst_id: analystId } }))
+  await page.route('/api/v1/auth/logout', async route => {
+    expect(route.request().method()).toBe('POST')
+    signedOut = true
+    await route.fulfill({ status: 204 })
+  })
+  await page.goto('/')
+  const trigger = page.locator('.account-menu summary')
+  await trigger.press('Enter')
+  const account = page.getByRole('region', { name: 'Account details' })
+  await expect(account).toContainText('Workspace ID')
+  await expect(account).toContainText('Analyst ID')
+  await account.getByRole('button', { name: 'Sign out' }).focus()
+  await page.keyboard.press('Escape')
+  await expect(account).not.toBeVisible()
+  await expect(trigger).toBeFocused()
+  await trigger.press('Enter')
+  await account.getByRole('button', { name: 'Sign out' }).press('Enter')
+  await expect(page.getByRole('heading', { name: 'Sign in to Inquest' })).toBeVisible()
+})
